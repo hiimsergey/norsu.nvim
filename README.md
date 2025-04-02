@@ -1,3 +1,8 @@
+# norsu.nvim
+A personal knowledge management plugin with a personally tailored markup language.
+
+## Language
+```
 /*
 * date: 2025-04-02
 * author:
@@ -59,7 +64,7 @@ int main(void) {
     printf("Code block!\n");
     return 0;
 }
-```
+\```
 
 > quote
 
@@ -71,8 +76,10 @@ comment
 */
 
 --- // separator
+```
 
-# goals
-- primarily designed for myself
-- human readable
-- tailored for neovim
+## Goals of the language
+- Extensibility
+- Human-readability, even in source mode
+- Neovim-first
+- appeal to me, foremost :)
