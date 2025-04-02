@@ -1,6 +1,11 @@
 local M = {}
 
-local function list_wikis_telescope()
+M.config = {
+    wikis = {},
+    list_wikis_func = list_wikis_telescope
+}
+
+function M.list_wikis_telescope()
     local actions = require "telescope.actions"
     local conf = require("telescope.config").values
     local finders = require "telescope.finders"
@@ -10,7 +15,7 @@ local function list_wikis_telescope()
         prompt_title = "Norsu Wikis",
         finder = finders.new_table {
             -- TODO PLACEHOLDER
-            results = { "one", "two", "three" }
+            results = M.config.wikis
         },
         sorter = conf.generic_sorter(),
         attach_mappings = function(prompt_bufnr)
@@ -22,11 +27,6 @@ local function list_wikis_telescope()
         end
     }):find()
 end
-
-M.config = {
-    wikis = {},
-    list_wikis_func = list_wikis_telescope
-}
 
 function M.setup(config)
     M.config = vim.tbl_deep_extend("force", M.config, config or {})
