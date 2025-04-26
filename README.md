@@ -3,10 +3,10 @@ A personal knowledge management plugin with a personally tailored markup languag
 
 ## Language
 ```
-/*
-* date: 2025-04-02
-* author:
-* type: frontmatter
+/***
+date: 2025-04-02
+author: me
+type: frontmatter
 */
 
 # heading 1
@@ -22,6 +22,8 @@ _underline_
 ~strikethrough~
 =highlight=
 `code`
+$\TeX$
+// Inline markers must be directly connected to text. `* bold? *` is invalid.
 
 [[wiki note link]] // ./'wiki note link'.no
 [[wiki note link|]]
@@ -57,8 +59,6 @@ AA. same but in capital
 | content      | content      |
 | content      | content      |
 
-// comment
-
 ```c
 int main(void) {
     printf("Code block!\n");
@@ -79,7 +79,8 @@ comment
 ```
 
 ## Goals of the language
+- Simplicity
 - Extensibility
 - Human-readability, even in source mode
-- Neovim-first
+- Neovim first
 - appeal to me, foremost :)
