@@ -1,28 +1,70 @@
+local vim = vim
 local actions = require "telescope.actions"
 local conf = require "telescope.config".values
 local finders = require "telescope.finders"
 local pickers = require "telescope.pickers"
 
-local vim = vim
+local ctx = require "norsu.context"
+
 local M = {}
 
+-- TODO NOW
+-- where to store ctx variables (current wiki)
+-- write the picker
+-- vim.cmd.edit command
+-- log msg
 M.NorsuNewNote = function(opts)
     if opts.args == "" then
-        opts.args = vim.fn.input("Enter new note name: ")
+        -- TODO use picker
+        print "TODO no args :("
+        return
     end
-    -- TODO PLAN
-    -- vim.cmd.edit(WIKI_PATH .. opts.args)
-    -- reindex
-    print("about to make note" .. opts.args)
+
+    if opts.args:sub(-3, -1) ~= ".no" then
+        opts.args = opts.args .. ".no"
+        -- TODO NOW
+    end
+
+    vim.cmd.edit(ctx.cur_wiki .. opts.args)
 end
 
 M.NorsuNewFolder = function(opts)
     if opts.args == "" then
-        opts.args = vim.fn.input("Enter new folder name: ")
+        -- TODO use picker
+        print "TODO no args :("
+        return
     end
+
+    vim.fn.mkdir(ctx.cur_wiki .. opts.args)
+    vim.notify("Norsu: Made folder " .. opts.args, vim.log.levels.INFO)
+end
+
+-- TODO
+M.NorsuMove = function(opts)
+    if opts.args == "" then
+        -- TODO use picker
+        print "TODO no args :("
+        return
+    end
+
+    opts.args = vim.split(opts.args, " ", { trimempty = true })
+
+    local dest = opts.args[#opts.args]
+    if not vim.uv.fs_stat(dest) then
+        print(dest .. " doesnt exist :( TODO")
+        return
+    end
+
     -- TODO PLAN
-    -- create folder
-    print("TODO about to mkdir " .. opts.args)
+    -- if there is only arg the src file is the currently open one
+    for i = 1, #opts.args - 1 do
+        -- TODO PLAN
+        -- move opts.args[i] to dest
+        if not vim.fn.isabsolute(opts.args[i]) then
+            opts.args[i] = ctx.cur_wiki .. opts.args[i]
+        end
+        vim.uv.fs_rename(opts.args[i], dest .. opts.args[i])
+    end
 end
 
 -- TODO NOW MOVE picker to abstraction
@@ -44,6 +86,10 @@ M.NorsuOpenWiki = function(opts)
             return true
         end
     }):find()
+
+    -- TODO PLAN
+    -- open the latest note of selected wiki
+    -- a simple vim.cmd.edit will suffice
 end
 
 return M
