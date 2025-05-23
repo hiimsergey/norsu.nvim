@@ -22,35 +22,29 @@
 local vim = vim
 
 local cmd = require "norsu.commands"
+local config = require "norsu.config"
 local group = vim.api.nvim_create_augroup("Norsu", { clear = true })
 
 local M = {}
 
-M.config = {
-    -- Deepest directory containing all detectable wikis on the system.
-    -- The wiki indexing algorithm stops crawling here.
-    -- All wikis outside the root will not be indexed.
-    root = vim.fn.expand "~"
-}
-
-M.setup = function(config)
-    M.config = vim.tbl_deep_extend("force", M.config, config or {})
+M.setup = function(opts)
+    config = vim.tbl_deep_extend("force", config, opts or {})
     vim.api.nvim_create_autocmd({ "BufEnter", "BufWinEnter" }, {
         group = group,
         callback = function()
             -- Abort indexing if opened file is outside wikis root
             local dir = vim.fn.expand "%:p:h"
-            if dir:sub(1, #M.config.root) ~= M.config.root then return end
+            if dir:sub(1, #config.root) ~= config.root then return end
 
             -- TODO ADD cache
             while true do
                 local candidate = dir .. "/.norsu.json"
                 if vim.fn.filereadable(candidate) == 1 then
-                    vim.b.wiki_root = dir
+                    vim.b.norsu_root = dir
                     break
                 end
 
-                if dir == M.config.root then return end
+                if dir == config.root then return end
                 dir = vim.fn.fnamemodify(dir, ":h")
             end
 

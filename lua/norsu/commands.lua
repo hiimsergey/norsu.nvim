@@ -1,12 +1,10 @@
 local vim = vim
 
-local actions = require "telescope.actions"
-local conf = require "telescope.config".values
-local finders = require "telescope.finders"
-local pickers = require "telescope.pickers"
+local config = require "norsu.config"
 
 local M = {}
 
+-- TODO FINAL ALL ADD desc to commands
 M.register_exclusive = function()
     vim.api.nvim_buf_create_user_command(0, "NorsuOpen", function(opts)
         if opts.args == "" then
@@ -19,24 +17,36 @@ M.register_exclusive = function()
             opts.args = opts.args .. ".no"
         end
 
-        if not vim.uv.fs_stat(opts.args) then
+        local dir = type(config.new_notes_dir) == "function" and
+            config.new_notes_dir() or
+            config.new_notes_dir
+        local note_relpath = dir .. "/" .. opts.args
+        local note_path = vim.b.norsu_root .. "/" .. note_relpath
+
+        if not vim.uv.fs_stat(note_path) then
             if not opts.bang then
                 vim.notify(
-                    "No such file: " .. opts.args .. " (use :NorsuOpen! to create)",
+                    "No such file: " .. note_relpath .. " (use :NorsuOpen! to create)",
                     vim.log.levels.ERROR
                 )
                 return
             end
 
-            local f = io.open(opts.args, "w")
+            local f = io.open(note_path, "w")
             if not f then
-                vim.notify("io.open: Could not create file " .. opts.args, vim.log.levels.ERROR)
+                vim.notify(
+                    "io.open: Could not create file " .. note_relpath,
+                    vim.log.levels.ERROR
+                )
                 return
             end
-            vim.notify("Created note " .. opts.args, vim.log.levels.INFO)
+
             f:close()
+            vim.notify("Created note " .. note_relpath, vim.log.levels.INFO)
+            -- TODO add to index
         end
-        vim.cmd.edit(vim.b.wiki_root .. "/" .. opts.args)
+
+        vim.cmd.edit(note_path)
     end, { bang = true, nargs = "?" })
 
     vim.api.nvim_buf_create_user_command(0, "NorsuNewFolder", function(opts)
@@ -46,8 +56,9 @@ M.register_exclusive = function()
             return
         end
 
-        vim.fn.mkdir(vim.b.wiki_root .. "/" .. opts.args, "p")
+        vim.fn.mkdir(vim.b.norsu_root .. "/" .. opts.args, "p")
         vim.notify("Made folder " .. opts.args, vim.log.levels.INFO)
+        -- TODO add to index if necessary
     end, { nargs = "?" })
 
     -- TODO
@@ -86,6 +97,12 @@ M.register_exclusive = function()
             vim.uv.fs_rename(opts.args[i], dest .. opts.args[i])
         end
     end, { nargs = "*" })
+
+    -- TODO
+    vim.api.nvim_buf_create_user_command(0, "NorsuDelete", function(opts)
+        vim.notify(opts.bang and "TODO doing crazy deletion" or "TODO asking you to delete")
+        -- TODO handle no currently open file
+    end, { bang = true, nargs = "?" })
 end
 
 M.register_ubiquitous = function()
@@ -93,34 +110,11 @@ M.register_ubiquitous = function()
         -- TODO replace { "hello", "world" } with .norsu.json template
         vim.fn.writefile({ "hello", "world" }, ".norsu.json")
         -- TODO index without checking/crawling
-        vim.notify("Initialized new wiki at " .. vim.fn.expand "%:p:h", vim.log.levels.INFO)
+        vim.notify(
+            "Initialized new wiki at " .. vim.fn.expand "%:p:h",
+            vim.log.levels.INFO
+        )
     end, {})
-
-    -- TODO CONSIDER! REMOVE
-    vim.api.nvim_buf_create_user_command(0, "NorsuOpenWiki", function(opts)
-        -- TODO handle args
-        print "TODO listing wikis"
-
-        pickers.new({}, {
-            prompt_title = "Norsu Wikis",
-            finder = finders.new_table {
-                -- TODO PLACEHOLDER
-                results = config.wikis
-            },
-            sorter = conf.generic_sorter(),
-            attach_mappings = function(prompt_bufnr)
-                actions.select_default:replace(function()
-                    actions.close(prompt_bufnr)
-                    -- TODO make it do something
-                end)
-                return true
-            end
-        }):find()
-
-        -- TODO PLAN
-        -- open the latest note of selected wiki
-        -- a simple vim.cmd.edit will suffice
-    end, { nargs = "?" })
 end
 
 return M
