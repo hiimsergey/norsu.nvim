@@ -1,4 +1,7 @@
 -- TODO NOW
+-- CONSIDER option
+--     NorsuOpen! always creates in root (like obsidian) vs creates in pwd
+--
 -- markdown features:
 --     basic link functionality:
 --         hide brackets when leaving line
@@ -12,6 +15,7 @@
 -- file cache:
 --     where links are
 --     backlinks
+-- CONSIDER?? access your wiki from anywhere
 -- FINAl
 -- help pages
 -- set filetype in lualine
@@ -33,14 +37,12 @@ M.setup = function(config)
     M.config = vim.tbl_deep_extend("force", M.config, config or {})
     vim.api.nvim_create_autocmd({ "BufEnter", "BufWinEnter" }, {
         group = group,
-        pattern = "*.no",
         callback = function()
             -- Abort indexing if opened file is outside wikis root
-            local file = vim.fn.expand "%:p"
-            if file:sub(1, #M.config.root) ~= M.config.root then return end
+            local dir = vim.fn.expand "%:p:h"
+            if dir:sub(1, #M.config.root) ~= M.config.root then return end
 
             -- TODO ADD cache
-            local dir = vim.fn.expand "%:p:h"
             while true do
                 local candidate = dir .. "/.norsu.json"
                 if vim.fn.filereadable(candidate) == 1 then
@@ -48,8 +50,8 @@ M.setup = function(config)
                     break
                 end
 
-                dir = vim.fn.fnamemodify(dir, ":h")
                 if dir == M.config.root then return end
+                dir = vim.fn.fnamemodify(dir, ":h")
             end
 
             cmd.register_exclusive()

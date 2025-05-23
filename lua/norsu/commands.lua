@@ -8,14 +8,10 @@ local pickers = require "telescope.pickers"
 local M = {}
 
 M.register_exclusive = function()
-    -- TODO NOW
-    -- write the picker
-    -- vim.cmd.edit command
-    -- log msg
     vim.api.nvim_buf_create_user_command(0, "NorsuOpen", function(opts)
         if opts.args == "" then
             -- TODO use picker
-            print "TODO no args :("
+            print "NorsuOpen TODO no args :("
             return
         end
 
@@ -23,11 +19,24 @@ M.register_exclusive = function()
             opts.args = opts.args .. ".no"
         end
 
-        -- TODO PLAN
-        -- if bang, touch the file
-        -- else throw error if non-existant; return
-        -- finally edit the file
-        --vim.cmd.edit(ctx.cur_wiki .. opts.args)
+        if not vim.uv.fs_stat(opts.args) then
+            if not opts.bang then
+                vim.notify(
+                    "No such file: " .. opts.args .. " (use :NorsuOpen! to create)",
+                    vim.log.levels.ERROR
+                )
+                return
+            end
+
+            local f = io.open(opts.args, "w")
+            if not f then
+                vim.notify("io.open: Could not create file " .. opts.args, vim.log.levels.ERROR)
+                return
+            end
+            vim.notify("Created note " .. opts.args, vim.log.levels.INFO)
+            f:close()
+        end
+        vim.cmd.edit(vim.b.wiki_root .. "/" .. opts.args)
     end, { bang = true, nargs = "?" })
 
     vim.api.nvim_buf_create_user_command(0, "NorsuNewFolder", function(opts)
@@ -37,8 +46,8 @@ M.register_exclusive = function()
             return
         end
 
-        vim.fn.mkdir(ctx.cur_wiki .. opts.args)
-        vim.notify("Norsu: Made folder " .. opts.args, vim.log.levels.INFO)
+        vim.fn.mkdir(vim.b.wiki_root .. "/" .. opts.args, "p")
+        vim.notify("Made folder " .. opts.args, vim.log.levels.INFO)
     end, { nargs = "?" })
 
     -- TODO
@@ -51,6 +60,15 @@ M.register_exclusive = function()
 
         opts.args = vim.split(opts.args, " ", { trimempty = true })
 
+        --[[ TODO PLAN
+        {entry} dest
+            dest dont exist -> error
+            dest no dir -> error
+            for every entry:
+                exists -> move
+                else -> add name to list
+            list not empty -> multi-line error
+        --]]
         local dest = opts.args[#opts.args]
         if not vim.uv.fs_stat(dest) then
             print(dest .. " doesnt exist :( TODO")
@@ -71,6 +89,14 @@ M.register_exclusive = function()
 end
 
 M.register_ubiquitous = function()
+    vim.api.nvim_buf_create_user_command(0, "NorsuInit", function()
+        -- TODO replace { "hello", "world" } with .norsu.json template
+        vim.fn.writefile({ "hello", "world" }, ".norsu.json")
+        -- TODO index without checking/crawling
+        vim.notify("Initialized new wiki at " .. vim.fn.expand "%:p:h", vim.log.levels.INFO)
+    end, {})
+
+    -- TODO CONSIDER! REMOVE
     vim.api.nvim_buf_create_user_command(0, "NorsuOpenWiki", function(opts)
         -- TODO handle args
         print "TODO listing wikis"
