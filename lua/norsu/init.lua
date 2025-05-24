@@ -1,4 +1,10 @@
 -- TODO
+-- NOW
+-- Move
+-- Delete
+-- vim.fn calls
+-- test all
+--
 -- REPLACE ALL vim.fn calls
 -- markdown features:
 --     basic link functionality:

@@ -4,7 +4,6 @@ local config = require "norsu.config"
 
 local M = {}
 
--- TODO FINAL ALL ADD desc to commands
 -- TODO ALL get completions
 M.register_exclusive = function()
     --- Open the file switcher for the current wiki with a Telescope picker.
@@ -94,7 +93,6 @@ M.register_exclusive = function()
     vim.api.nvim_buf_create_user_command(0, "NorsuNewFolder", NewFolder,
         { nargs = "?" })
 
-    -- TODO prevent moving outside the wiki
     --- Move the currently open note to another folder with a Telescope picker.
     --- @param opts MoveOpts
     --- @class MoveOpts
@@ -102,7 +100,7 @@ M.register_exclusive = function()
     local function Move(opts)
         if opts.args == "" then
             -- TODO use picker
-            print "TODO no args :("
+            vim.notify "TODO no args :("
             return
         end
 
@@ -121,6 +119,8 @@ M.register_exclusive = function()
             )
             return
         end
+
+        -- TODO prevent moving outside the wiki
 
         -- TODO CONSIDER keeping it with relative paths instead of root-centric paths
         local bufname = vim.api.nvim_buf_get_name(0)
@@ -200,9 +200,6 @@ M.register_ubiquitous = function()
     --- Initialize the current working directory as a Norsu wiki by creating
     --- `.norsu.json` .
     local function Init()
-        -- TODO replace { "hello", "world" } with .norsu.json template
-        -- TODO use vim.uv.fs_open, fs_write and fs_close
-
         vim.uv.fs_open(".norsu.json", 438, function(err, fd)
             if err then
                 vim.notify "uv.fs_open: Failed to open .norsu.json"
