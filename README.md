@@ -1,6 +1,15 @@
 # norsu.nvim
 A personal knowledge management plugin with a personally tailored markup language.
 
+Requires Neovim **0.11.0** or above.
+
+## Goals of the language
+- Simplicity
+- Extensibility
+- Human-readability, even in source mode
+- Neovim first
+- appeal to me, foremost :)
+
 ## Language
 ```
 /***
@@ -77,10 +86,3 @@ comment
 
 --- // separator
 ```
-
-## Goals of the language
-- Simplicity
-- Extensibility
-- Human-readability, even in source mode
-- Neovim first
-- appeal to me, foremost :)

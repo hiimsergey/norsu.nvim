@@ -1,7 +1,5 @@
--- TODO NOW
--- CONSIDER option
---     NorsuOpen! always creates in root (like obsidian) vs creates in pwd
---
+-- TODO
+-- REPLACE ALL vim.fn calls
 -- markdown features:
 --     basic link functionality:
 --         hide brackets when leaving line
@@ -27,26 +25,30 @@ local group = vim.api.nvim_create_augroup("Norsu", { clear = true })
 
 local M = {}
 
+--- Starting point of the norsu.nvim plugin.
+--- @param opts? NorsuConfig user's configuration
+--- @see config.lua
 M.setup = function(opts)
     config = vim.tbl_deep_extend("force", config, opts or {})
     vim.api.nvim_create_autocmd({ "BufEnter", "BufWinEnter" }, {
         group = group,
         callback = function()
+            local cwd = vim.uv.cwd()
+            if type(config.entry_dir) == "function" then
+                config.entry_dir = config.entry_dir()
+            end
+
             -- Abort indexing if opened file is outside wikis root
-            local dir = vim.fn.expand "%:p:h"
-            if dir:sub(1, #config.root) ~= config.root then return end
+            if not vim.fs.relpath(config.root, cwd) then return end
 
             -- TODO ADD cache
-            while true do
-                local candidate = dir .. "/.norsu.json"
-                if vim.fn.filereadable(candidate) == 1 then
-                    vim.b.norsu_root = dir
-                    break
-                end
-
-                if dir == config.root then return end
-                dir = vim.fn.fnamemodify(dir, ":h")
-            end
+            local norsu_json = vim.fs.find(".norsu.json", {
+                upward = true,
+                path = cwd,
+                stop = config.root
+            })
+            if not next(norsu_json) then return end
+            vim.b.norsu_root = vim.fs.dirname(norsu_json[1])
 
             cmd.register_exclusive()
 
@@ -57,6 +59,8 @@ M.setup = function(opts)
                     -- TODO PLAN
                     -- reindex:
                     -- find new links
+                    -- CONSIDER unregistering exclusive commands on detecting
+                    -- .norsu.json missing. maybe there is an io-related signal
                     vim.cmd.quit()
                 end
             })
