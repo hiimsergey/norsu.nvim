@@ -4,6 +4,45 @@ local config = require "norsu.config"
 
 local M = {}
 
+M.register_ubiquitous = function()
+    --- Initialize the current working directory as a Norsu wiki by creating
+    --- `.norsu.json` .
+    local function Init()
+        vim.uv.fs_open(".norsu.json", "w", 438, function(err, fd)
+            if err then
+                vim.notify "uv.fs_open: Failed to open .norsu.json"
+                return
+            end
+
+            vim.uv.fs_write(
+                fd,
+[[
+{
+    "TODO": "what to put here?"
+}
+]],
+                -1,
+                function()
+                    vim.uv.fs_close(fd, function()
+                        vim.notify "uv.fs_write: Failed to write to .norsu.json"
+                    end)
+                end
+            )
+        end)
+
+        -- TODO index without checking/crawling
+        M.register_exclusive()
+
+        local bufname = vim.api.nvim_buf_get_name(0)
+        local bufdir = bufname == "" and vim.uv.cwd() or vim.fs.dirname(bufname)
+        vim.notify(
+            "Initialized new wiki at " .. bufdir,
+            vim.log.levels.INFO
+        )
+    end
+    vim.api.nvim_buf_create_user_command(0, "NorsuInit", Init, {})
+end
+
 -- TODO ALL get completions
 M.register_exclusive = function()
     --- Open the file switcher for the current wiki with a Telescope picker.
@@ -37,7 +76,7 @@ M.register_exclusive = function()
             local f = vim.uv.fs_open(note_path, "a", 420)
             if not f then
                 vim.notify(
-                    "io.open: Could not create file " .. note_relpath,
+                    "uv.fs_open: Could not create file " .. note_relpath,
                     vim.log.levels.ERROR
                 )
                 return
@@ -53,7 +92,7 @@ M.register_exclusive = function()
     vim.api.nvim_buf_create_user_command(0, "NorsuOpen", Open,
         { bang = true, nargs = "?" })
 
-    --- Creates a new folder in the wiki with a Telescope picker.
+    --- Create a new folder in the wiki with a Telescope picker.
     --- @param opts NewFolderOpts
     --- @class NewFolderOpts
     --- @field args string just create the folder at this path
@@ -90,8 +129,7 @@ M.register_exclusive = function()
         vim.uv.chdir(cwd)
         -- TODO add to index if necessary
     end
-    vim.api.nvim_buf_create_user_command(0, "NorsuNewFolder", NewFolder,
-        { nargs = "?" })
+    vim.api.nvim_buf_create_user_command(0, "NorsuNewFolder", NewFolder, { nargs = "?" })
 
     --- Move the currently open note to another folder with a Telescope picker.
     --- @param opts MoveOpts
@@ -104,7 +142,11 @@ M.register_exclusive = function()
             return
         end
 
-        local stat = vim.uv.fs_stat(opts.args)
+        local abspath = vim.b.norsu_root .. "/" .. opts.args
+        local relpath = vim.fs.relpath(vim.b.norsu_root, abspath)
+
+        -- Ensure the destination exists
+        local stat = vim.uv.fs_stat(abspath)
         if not stat then
             vim.notify(
                 opts.args .. " doesn't exist",
@@ -120,119 +162,120 @@ M.register_exclusive = function()
             return
         end
 
-        -- TODO prevent moving outside the wiki
+        -- Prevent moving outside the wiki
+        if not relpath then
+            -- TODO TEST
+            vim.notify(
+                opts.args .. " is not a wiki subpath",
+                vim.log.levels.ERROR
+            )
+            return
+        end
 
-        -- TODO CONSIDER keeping it with relative paths instead of root-centric paths
-        local bufname = vim.api.nvim_buf_get_name(0)
-        local basename = vim.fs.basename(bufname)
         -- TODO TEST overwriting
-        stat = vim.uv.fs_rename(bufname, opts.args .. "/" .. basename)
+        local bufname = vim.api.nvim_buf_get_name(0)
+        local bufrelpath = vim.fs.relpath(vim.b.norsu_root, bufname)
+        local bufbasename = vim.fs.basename(bufname)
+
+        stat = vim.uv.fs_rename(bufname, abspath .. "/" .. bufbasename)
         if not stat then
             vim.notify(
-                "uv.fs_rename: Failed to move " .. basename .. " to " .. opts.args,
+                "uv.fs_rename: Failed to move " .. bufrelpath .. " to " .. relpath,
                 vim.log.levels.ERROR
             )
             return
         end
 
         vim.notify(
-            basename .. " -> " .. opts.args .. "/" .. basename,
+            bufrelpath .. " -> " .. abspath .. "/" .. bufbasename,
             vim.log.levels.INFO
         )
     end
-    vim.api.nvim_buf_create_user_command(0, "NorsuMove", Move,
-        { nargs = "?" })
+    vim.api.nvim_buf_create_user_command(0, "NorsuMove", Move, { nargs = "?" })
 
     --- Delete notes and folders using a Telescope picker.
     --- Use `<Tab>` to select items and `<CR>` to submit.
     --- @param opts DeleteOpts
     --- @class DeleteOpts
     --- @field args string only delete the entry at this path.
-    ---                    % resolves to the currently open note.
+    ---                    `%` resolves to the currently open note.
     --- @field bang boolean skip confirmation dialog
     local function Delete(opts)
-        -- show number of files in dir if no bang
+        local paths = {}
+        local ghosts = {}
+        local foreigners = {}
+        local succesful = 0
+        local numerus = #paths == 1 and " entry" or " entries"
+
+        local function actually_delete()
+            for _, path in ipairs(paths) do
+                vim.fs.rm(path, { recursive = true })
+                succesful = succesful + 1
+            end
+
+            local errmsg = ""
+            if #ghosts > 0 then
+                errmsg = errmsg .. "NorsuDelete: No such files or directories:\n"
+                for _, path in ipairs(ghosts) do
+                    errmsg = errmsg .. "        " .. path .. "\n"
+                end
+            end
+            if #foreigners > 0 then
+                errmsg = errmsg .. "NorsuDelete: File or directories outside the wiki:\n"
+                for _, path in ipairs(foreigners) do
+                    errmsg = errmsg .. "        " .. path .. "\n"
+                end
+            end
+
+            -- TODO TEST
+            vim.schedule_wrap(function() -- TODO DEBUG
+                vim.api.nvim_echo({{ errmsg }}, errmsg == "", { err = true })
+            end)
+            vim.notify("Deleted " .. succesful .. numerus, vim.log.levels.INFO)
+        end
 
         if opts.args == "" then
-            -- TODO CONSIDER C-a to select all
-            -- TODO handle bang
-            -- TODO NOTE multi select telescope picker
             vim.notify "TODO NorsuDelete no picker? :("
             return
+        else
+            paths = { opts.args }
         end
 
-        local abspath = vim.b.norsu_root .. "/" .. opts.args
-        local relpath = vim.fs.relpath(vim.b.norsu_root, abspath)
+        for i = 1, #paths do
+            local abspath = paths[i] == "%" and
+                vim.api.nvim_buf_get_name(0) or
+                vim.b.norsu_root .. "/" .. paths[i]
 
-        -- Handle paths outside the wiki
-        if not relpath then
-            vim.notify "TODO not a subpath >:("
-            return
-        end
+            if not vim.uv.fs_stat(abspath) then
+                table.insert(ghosts, paths[i])
+            end
 
-        if opts.args == "%" then
-            opts.args = vim.api.nvim_buf_get_name(0)
+            local relpath = vim.fs.relpath(vim.b.norsu_root, abspath)
+            if not relpath then
+                table.insert(foreigners, paths[i])
+            end
+
+            paths[i] = abspath
         end
 
         if opts.bang then
             vim.ui.input(
-                { prompt = "Do you want to delete " .. relpath .. "? [y/N] " },
+                { prompt =
+                    "Do you want to delete " .. #paths .. numerus .. " [y/N] "
+                },
                 function(input)
                     if not (input and input:lower() == "y") then
-                        vim.notify "TODO Delte aboreted"
+                        vim.notify "Deletion aborted"
                         return
                     end
+                    actually_delete()
                 end
             )
+            return
         end
-
-        -- TODO CONSIDER deleting multiple files
-        -- TODO CHECK handle nonexistent files
-        vim.fs.rm(abspath, { recursive = true })
-        vim.notify("Deleted " .. relpath)
     end
     vim.api.nvim_buf_create_user_command(0, "NorsuDelete", Delete,
         { bang = true, nargs = "?" })
-end
-
-M.register_ubiquitous = function()
-    -- TODO FINAL CHECK if .norsu.json is the only thing needed
-    --- Initialize the current working directory as a Norsu wiki by creating
-    --- `.norsu.json` .
-    local function Init()
-        vim.uv.fs_open(".norsu.json", 438, function(err, fd)
-            if err then
-                vim.notify "uv.fs_open: Failed to open .norsu.json"
-                return
-            end
-
-            vim.uv.fs_write(
-                fd,
-[[
-{
-    "TODO": "what to put here?"
-}
-]],
-                -1,
-                function()
-                    vim.uf.fs_close(fd, function()
-                        vim.notify "us.fs_write: Failed to write to .norsu.json"
-                    end)
-                end
-            )
-        end)
-
-        -- TODO index without checking/crawling
-        -- TODO TEST
-        vim.fn.writefile({ "register_exclusive" }, "/home/sergey/downloads/norsuvault/msg")
-        M.register_exclusive()
-
-        vim.notify(
-            "Initialized new wiki at " .. vim.fs.dirname(vim.api.nvim_buf_get_name(0)),
-            vim.log.levels.INFO
-        )
-    end
-    vim.api.nvim_buf_create_user_command(0, "NorsuInit", Init, {})
 end
 
 return M

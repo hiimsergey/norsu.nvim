@@ -8,7 +8,7 @@ Requires Neovim **0.11.0** or above.
 - Extensibility
 - Human-readability, even in source mode
 - Neovim first
-- appeal to me, foremost :)
+- appeal to me :)
 
 ## Language
 ```
@@ -17,6 +17,15 @@ date: 2025-04-02
 author: me
 type: frontmatter
 */
+
+// single-line comment
+/*
+multi
+line
+comment
+*/
+
+--- // separator
 
 # heading 1
 ## heading 2
@@ -76,13 +85,4 @@ int main(void) {
 \```
 
 > quote
-
-// single-line comment
-/*
-multi
-line
-comment
-*/
-
---- // separator
 ```

@@ -2,10 +2,8 @@
 -- NOW
 -- Move
 -- Delete
--- vim.fn calls
 -- test all
 --
--- REPLACE ALL vim.fn calls
 -- markdown features:
 --     basic link functionality:
 --         hide brackets when leaving line
@@ -23,6 +21,8 @@
 -- FINAl
 -- help pages
 -- set filetype in lualine
+-- norsu-export: pdf, html, markdown
+-- REPLACE .norsu.json with .norsu/ if necessary
 local vim = vim
 
 local cmd = require "norsu.commands"

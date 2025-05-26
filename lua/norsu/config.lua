@@ -13,7 +13,7 @@
 
 --- @type NorsuConfig
 return {
-    root = os.getenv "HOME" --[[@as string]],
+    root = os.getenv "HOME" or os.getenv "HOMEPATH" --[[@as string]],
     entry_dir = ".",
     allow_folder_delete = false
 }
