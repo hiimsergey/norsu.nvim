@@ -1,4 +1,4 @@
---- @class NorsuConfig
+--- @class Config
 --- @field root string
 ---     Deepest directory containing all detectable wikis on the system.
 ---     The wiki indexing algorithm stops crawling here.
@@ -8,12 +8,9 @@
 ---     :NorsuNewFolder respectively get saved.
 ---     Accepts a string containing the relative path from the wiki root or a
 ---     function returning such a string.
---- @field allow_folder_delete boolean
----     Allow :NorsuDelete to also recursively delete folders.
 
---- @type NorsuConfig
+--- @type Config
 return {
     root = os.getenv "HOME" or os.getenv "HOMEPATH" --[[@as string]],
-    entry_dir = ".",
-    allow_folder_delete = false
+    entry_dir = "."
 }

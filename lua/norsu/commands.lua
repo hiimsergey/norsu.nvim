@@ -1,14 +1,17 @@
 local vim = vim
 
-local config = require "norsu.config"
-
 local M = {}
 
-M.register_ubiquitous = function()
-    -- TODO dont let it overwrite an existing wiki
+--- @param config Config user configuration set in `require "norsu".setup()`
+M.register_ubiquitous = function(config)
     --- Initialize the current working directory as a Norsu wiki by creating
     --- `.norsu.json` .
     local function Init()
+        if vim.uv.fs_stat(".norsu.json") then
+            vim.notify(vim.b.norsu_root .. " is already a wiki")
+            return
+        end
+
         local fd, err_open = vim.uv.fs_open(".norsu.json", "w", 438)
         if not fd then
             vim.notify(err_open, vim.log.levels.ERROR)
@@ -30,19 +33,20 @@ M.register_ubiquitous = function()
         end
 
         -- TODO index without checking/crawling
-        M.register_exclusive()
+        M.register_exclusive(config)
 
         local bufname = vim.api.nvim_buf_get_name(0)
         local bufdir = bufname == "" and vim.uv.cwd() or vim.fs.dirname(bufname)
 
-        vim.b.norsu_root = bufdir -- TODO CONSIDER
+        vim.b.norsu_root = bufdir -- TODO FINAL CONSIDER
         vim.notify("New Norsu wiki at " .. bufdir, vim.log.levels.INFO)
     end
     vim.api.nvim_buf_create_user_command(0, "NorsuInit", Init, {})
 end
 
 -- TODO ALL get completions
-M.register_exclusive = function()
+--- @param config Config user configuration from `require "norsu".setup()`
+M.register_exclusive = function(config)
     --- Open the file switcher for the current wiki with a Telescope picker.
     --- @param opts OpenOpts
     --- @class OpenOpts
@@ -131,6 +135,7 @@ M.register_exclusive = function()
     --- @param opts MoveOpts
     --- @class MoveOpts
     --- @field args string just move the note into this path
+    --- @field bang boolean overwrite the destination, if already existed
     local function Move(opts)
         if opts.args == "" then
             -- TODO use picker
@@ -154,28 +159,36 @@ M.register_exclusive = function()
 
         -- Prevent moving outside the wiki
         if not relpath then
-            -- TODO TEST
             vim.notify("Not a wiki subpath: " .. opts.args, vim.log.levels.ERROR)
             return
         end
 
-        -- TODO TEST overwriting
         local bufname = vim.api.nvim_buf_get_name(0)
         local bufrelpath = vim.fs.relpath(vim.b.norsu_root, bufname)
         local bufbasename = vim.fs.basename(bufname)
 
-        local ok, err_rename = vim.uv.fs_rename(bufname, abspath .. "/" .. bufbasename)
+        local bufpath_new = abspath .. "/" .. bufbasename
+        local bufrelpath_new = vim.fs.relpath(vim.b.norsu_root, bufpath_new)
+
+        if not opts.bang and vim.uv.fs_stat(bufpath_new) then
+            vim.notify(
+                bufrelpath_new .. " already exists (use :NorsuMove! to overwrite)",
+                vim.log.levels.ERROR
+            )
+            return
+        end
+
+        local ok, err_rename = vim.uv.fs_rename(bufname, bufpath_new)
         if not ok then
             vim.notify(err_rename, vim.log.levels.ERROR)
             return
         end
 
-        vim.notify(
-            bufrelpath .. " -> " .. abspath .. "/" .. bufbasename,
-            vim.log.levels.INFO
-        )
+        vim.cmd.edit(bufpath_new) -- TODO READ is there a more elegant solution?
+        vim.notify(bufrelpath .. " -> " .. bufrelpath_new, vim.log.levels.INFO)
     end
-    vim.api.nvim_buf_create_user_command(0, "NorsuMove", Move, { nargs = "?" })
+    vim.api.nvim_buf_create_user_command(0, "NorsuMove", Move,
+        { bang = true, nargs = "?" })
 
     --- Delete notes and folders using a Telescope picker.
     --- Use `<Tab>` to select items and `<CR>` to submit.
@@ -189,14 +202,15 @@ M.register_exclusive = function()
         local ghosts = {}
         local foreigners = {}
 
-        -- TODO CONSIDER support "foobar" instead of only "foobar.no"
-
         if opts.args == "" then
             vim.notify "TODO NorsuDelete no picker? :("
             return
         else
             paths = { opts.args }
         end
+
+        -- TODO TEST
+        paths = { "delme", "delme.no" }
 
         -- TODO close buffers of deleted notes
         -- use the proposed O(n + m) solution
@@ -223,7 +237,9 @@ M.register_exclusive = function()
         local numerus = #paths == 1 and " entry" or " entries"
         local function actually_delete()
             for _, path in ipairs(paths) do
-                vim.fs.rm(path, { recursive = true })
+                vim.fs.rm(path, { recursive = true }) -- TODO NOW
+                -- TODO DEBUG deleting folders didnt work either way kinda
+                -- maybe .no addition is at fault
             end
 
             local errmsg = ""
@@ -251,7 +267,7 @@ M.register_exclusive = function()
             end
         end
 
-        if not opts.bang then
+        if not opts.bang and #paths > 0 then
             vim.ui.input(
                 { prompt =
                     "Do you want to delete " .. #paths .. numerus .. " [y/N] "
