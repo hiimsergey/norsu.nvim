@@ -8,9 +8,12 @@ M.register_ubiquitous = function()
     --- Initialize the current working directory as a Norsu wiki by creating
     --- `.norsu.json` .
     local function Init()
-        vim.uv.fs_open(".norsu.json", "w", 438, function(err, fd)
-            if err then
-                vim.notify "uv.fs_open: Failed to open .norsu.json"
+        vim.uv.fs_open(".norsu.json", "w", 438, function(err_open, fd)
+            if err_open then
+                vim.defer_fn(function()
+                    -- TODO NOW change every one to look like this
+                    vim.notify(err_open, vim.log.levels.ERROR)
+                end, 0)
                 return
             end
 
@@ -23,8 +26,15 @@ M.register_ubiquitous = function()
 ]],
                 -1,
                 function()
-                    vim.uv.fs_close(fd, function()
-                        vim.notify "uv.fs_write: Failed to write to .norsu.json"
+                    vim.uv.fs_close(fd, function(err_close)
+                        if err_close then
+                            vim.schedule_wrap(function()
+                                vim.notify(
+                                    "uv.fs_write: Failed to write to .norsu.json",
+                                    vim.log.levels.ERROR
+                                )
+                            end)
+                        end
                     end)
                 end
             )
@@ -265,7 +275,10 @@ M.register_exclusive = function()
                 },
                 function(input)
                     if not (input and input:lower() == "y") then
-                        vim.notify "Deletion aborted"
+                        vim.notify(
+                            "Deletion aborted",
+                            vim.log.levels.INFO
+                        )
                         return
                     end
                     actually_delete()
