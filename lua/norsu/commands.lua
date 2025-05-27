@@ -5,7 +5,7 @@ local M = {}
 --- @param config Config user configuration set in `require "norsu".setup()`
 M.register_ubiquitous = function(config)
     --- Initialize the current working directory as a Norsu wiki by creating
-    --- `.norsu.json` .
+    --- `.norsu.json`.
     local function Init()
         if vim.uv.fs_stat(".norsu.json") then
             vim.notify(vim.b.norsu_root .. " is already a wiki")
@@ -133,6 +133,9 @@ M.register_exclusive = function(config)
     vim.api.nvim_buf_create_user_command(0, "NorsuNewFolder", NewFolder, { nargs = "?" })
 
     --- Rename the currently open note with a Telescope picker or an arg.
+    --- @param opts RenameOpts
+    --- @class RenameOpts
+    --- @field args string just rename the note to this name
     local function Rename(opts)
         local bufpath = vim.api.nvim_buf_get_name(0)
         if bufpath == "" then
@@ -143,26 +146,37 @@ M.register_exclusive = function(config)
         end
         local bufdir = vim.fs.dirname(bufpath)
 
-        -- TODO NOW ADD abort behavior
+        local function actually_rename()
+            if opts.args:find "[%z/\\<>:\"|%?%*]" or
+                opts.args == "." or
+                opts.args == ".." then
+                vim.defer_fn(function()
+                    vim.notify("Invalid basename: " .. opts.args, vim.log.levels.ERROR)
+                end, 0)
+                return
+            end
+
+            local bufpath_new = bufdir .. "/" .. opts.args
+            vim.uv.fs_rename(bufpath, bufpath_new)
+            vim.cmd.edit(bufpath_new)
+        end
+
         if opts.args == "" then
             vim.ui.input(
                 { prompt = "Enter new name: " },
-                function(input) opts.args = input end
+                function(input)
+                    if input == nil then
+                        vim.notify("Rename aborted", vim.log.levels.INFO)
+                        return
+                    end
+                    opts.args = input
+                    actually_rename()
+                end
             )
-        end
-
-        if opts.args:find "[%z/\\<>:\"|%?%*]" or
-            opts.args == "." or
-            opts.args == ".." then
-            vim.defer_fn(function()
-                vim.notify("Invalid basename: " .. opts.args, vim.log.levels.ERROR)
-            end, 0)
             return
         end
 
-        local bufpath_new = bufdir .. "/" .. opts.args
-        vim.uv.fs_rename(bufpath, bufpath_new)
-        vim.cmd.edit(bufpath_new)
+        actually_rename()
     end
     vim.api.nvim_buf_create_user_command(0, "NorsuRename", Rename, { nargs = "?" })
 
