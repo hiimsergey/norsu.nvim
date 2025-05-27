@@ -25,6 +25,7 @@
 -- REPLACE .norsu.json with .norsu/ if necessary
 -- elegant way to make lua_ls shut up about "local vim = vim"
 -- CONSIDER making a norsu-no-treesitter plugin that does everything the vimwiki way
+-- FINAL ALL CHECK all pickers are abortable
 local vim = vim
 
 local cmd = require "norsu.commands"

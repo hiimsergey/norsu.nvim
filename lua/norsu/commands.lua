@@ -47,7 +47,8 @@ end
 -- TODO ALL get completions
 --- @param config Config user configuration from `require "norsu".setup()`
 M.register_exclusive = function(config)
-    --- Open the file switcher for the current wiki with a Telescope picker.
+    --- Open the file switcher for the current wiki with a Telescope picker or
+    --- open a note from an arg.
     --- @param opts OpenOpts
     --- @class OpenOpts
     --- @field args string just open the note at this path
@@ -95,7 +96,7 @@ M.register_exclusive = function(config)
     vim.api.nvim_buf_create_user_command(0, "NorsuOpen", Open,
         { bang = true, nargs = "?" })
 
-    --- Create a new folder in the wiki with a Telescope picker.
+    --- Create a new folder in the wiki with a Telescope picker or an arg.
     --- @param opts NewFolderOpts
     --- @class NewFolderOpts
     --- @field args string just create the folder at this path
@@ -131,7 +132,41 @@ M.register_exclusive = function(config)
     end
     vim.api.nvim_buf_create_user_command(0, "NorsuNewFolder", NewFolder, { nargs = "?" })
 
-    --- Move the currently open note to another folder with a Telescope picker.
+    --- Rename the currently open note with a Telescope picker or an arg.
+    local function Rename(opts)
+        local bufpath = vim.api.nvim_buf_get_name(0)
+        if bufpath == "" then
+            vim.defer_fn(function()
+                vim.notify("Empty buffer", vim.log.levels.ERROR)
+            end, 0)
+            return
+        end
+        local bufdir = vim.fs.dirname(bufpath)
+
+        -- TODO NOW ADD abort behavior
+        if opts.args == "" then
+            vim.ui.input(
+                { prompt = "Enter new name: " },
+                function(input) opts.args = input end
+            )
+        end
+
+        if opts.args:find "[%z/\\<>:\"|%?%*]" or
+            opts.args == "." or
+            opts.args == ".." then
+            vim.defer_fn(function()
+                vim.notify("Invalid basename: " .. opts.args, vim.log.levels.ERROR)
+            end, 0)
+            return
+        end
+
+        local bufpath_new = bufdir .. "/" .. opts.args
+        vim.uv.fs_rename(bufpath, bufpath_new)
+        vim.cmd.edit(bufpath_new)
+    end
+    vim.api.nvim_buf_create_user_command(0, "NorsuRename", Rename, { nargs = "?" })
+
+    --- Move the currently open note to another folder with a Telescope picker or an arg.
     --- @param opts MoveOpts
     --- @class MoveOpts
     --- @field args string just move the note into this path
@@ -163,9 +198,9 @@ M.register_exclusive = function(config)
             return
         end
 
-        local bufname = vim.api.nvim_buf_get_name(0)
-        local bufrelpath = vim.fs.relpath(vim.b.norsu_root, bufname)
-        local bufbasename = vim.fs.basename(bufname)
+        local bufpath = vim.api.nvim_buf_get_name(0)
+        local bufrelpath = vim.fs.relpath(vim.b.norsu_root, bufpath)
+        local bufbasename = vim.fs.basename(bufpath)
 
         local bufpath_new = abspath .. "/" .. bufbasename
         local bufrelpath_new = vim.fs.relpath(vim.b.norsu_root, bufpath_new)
@@ -178,7 +213,7 @@ M.register_exclusive = function(config)
             return
         end
 
-        local ok, err_rename = vim.uv.fs_rename(bufname, bufpath_new)
+        local ok, err_rename = vim.uv.fs_rename(bufpath, bufpath_new)
         if not ok then
             vim.notify(err_rename, vim.log.levels.ERROR)
             return
@@ -190,7 +225,7 @@ M.register_exclusive = function(config)
     vim.api.nvim_buf_create_user_command(0, "NorsuMove", Move,
         { bang = true, nargs = "?" })
 
-    --- Delete notes and folders using a Telescope picker.
+    --- Delete notes and folders using a Telescope picker or an arg.
     --- Use `<Tab>` to select items and `<CR>` to submit.
     --- @param opts DeleteOpts
     --- @class DeleteOpts
@@ -237,9 +272,7 @@ M.register_exclusive = function(config)
         local numerus = #paths == 1 and " entry" or " entries"
         local function actually_delete()
             for _, path in ipairs(paths) do
-                vim.fs.rm(path, { recursive = true }) -- TODO NOW
-                -- TODO DEBUG deleting folders didnt work either way kinda
-                -- maybe .no addition is at fault
+                vim.fs.rm(path, { recursive = true })
             end
 
             local errmsg = ""
