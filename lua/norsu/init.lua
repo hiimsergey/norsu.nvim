@@ -1,19 +1,10 @@
 -- TODO
--- NOW
--- Move
--- Delete
--- test all
---
 -- markdown features:
 --     basic link functionality:
 --         hide brackets when leaving line
 --         <enter> goes there
 --     link autocomplete (with #headings)
 --     table autocomplete
--- write commands:
---     list notes in this wiki (telescope)
---     list norsu commands (telescope)
---     view backlinks (telescope)
 -- file cache:
 --     where links are
 --     backlinks
@@ -32,6 +23,16 @@ local cmd = require "norsu.commands"
 local config = require "norsu.config"
 local group = vim.api.nvim_create_augroup("Norsu", { clear = true })
 
+-- TODO NOTE indexing
+-- for every .no file get
+-- name
+-- size
+-- tags
+-- outlinks
+-- backlinks
+-- atime
+-- mtime
+-- (some of these can be inferred instead of explicitly saved)
 local M = {}
 
 --- Starting point of the norsu.nvim plugin.
@@ -39,6 +40,14 @@ local M = {}
 --- @see config.lua
 M.setup = function(opts)
     config = vim.tbl_deep_extend("force", config, opts or {})
+
+    if vim.b.norsu then
+        vim.notify(
+            "norsu.nvim: Someone else already took our namespace! Resigning...",
+            vim.log.levels.ERROR
+        )
+        return
+    end
 
     vim.api.nvim_create_autocmd({ "BufEnter", "BufWinEnter" }, {
         group = group,
@@ -58,8 +67,18 @@ M.setup = function(opts)
                 stop = config.root
             })
             if not next(norsu_json) then return end
-            vim.b.norsu_root = vim.fs.dirname(norsu_json[1])
 
+            -- TODO TEST
+            -- switching panes
+            -- opening notes with NorsuOpen
+            -- opening with :edit
+            -- Where indexing starts
+            -- TODO TYPE annotate
+            vim.b.norsu = {
+                root = vim.fs.dirname(norsu_json[1]),
+                history = {},
+                i = 0
+            }
             cmd.register_exclusive(config)
 
             vim.api.nvim_create_autocmd("BufWritePost", {
@@ -70,7 +89,6 @@ M.setup = function(opts)
                     -- reindex:
                     -- find new links
                     -- CONSIDER unregistering exclusive commands on detecting
-                    -- .norsu.json missing. maybe there is an io-related signal
                     vim.cmd.quit()
                 end
             })

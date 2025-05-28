@@ -8,7 +8,7 @@ M.register_ubiquitous = function(config)
     --- `.norsu.json`.
     local function Init()
         if vim.uv.fs_stat(".norsu.json") then
-            vim.notify(vim.b.norsu_root .. " is already a wiki")
+            vim.notify(vim.b.norsu.root .. " is already a wiki")
             return
         end
 
@@ -38,7 +38,7 @@ M.register_ubiquitous = function(config)
         local bufname = vim.api.nvim_buf_get_name(0)
         local bufdir = bufname == "" and vim.uv.cwd() or vim.fs.dirname(bufname)
 
-        vim.b.norsu_root = bufdir -- TODO FINAL CONSIDER
+        vim.b.norsu.root = bufdir -- TODO FINAL CONSIDER
         vim.notify("New Norsu wiki at " .. bufdir, vim.log.levels.INFO)
     end
     vim.api.nvim_buf_create_user_command(0, "NorsuInit", Init, {})
@@ -62,8 +62,8 @@ M.register_exclusive = function(config)
 
         if opts.args:sub(-3, -1) ~= ".no" then opts.args = opts.args .. ".no" end
 
-        local abspath = vim.b.norsu_root .. "/" .. config.entry_dir .. "/" .. opts.args
-        local relpath = vim.fs.relpath(vim.b.norsu_root, abspath)
+        local abspath = vim.b.norsu.root .. "/" .. config.entry_dir .. "/" .. opts.args
+        local relpath = vim.fs.relpath(vim.b.norsu.root, abspath)
 
         -- Ensure the destination exists
         if not relpath then
@@ -91,6 +91,23 @@ M.register_exclusive = function(config)
             -- TODO add to index
         end
 
+        -- TODO TEMPORARY + NOW move this to own function shared by NorsuLinkFollow
+        -- + NOTE vim.cmd.edit is great but i need:
+        --      create buffer (with handle pls)
+        --      open this bufer in this pane
+        --
+        -- TODO PLAN
+        -- test all prior commands
+        -- basic indexing
+        -- pickers for all prior commands
+        -- util.open()
+        -- :NorsuGoBack and :NorsuGoForward
+        -- write tree-sitter-norsu
+        local buf = nil
+        table.insert(vim.b.norsu.history, buf)
+        vim.b.norsu.i = vim.b.norsu.i + 1
+        vim.b.norsu.history[vim.b.norsu.i + 1] = nil
+
         vim.cmd.edit(abspath)
     end
     vim.api.nvim_buf_create_user_command(0, "NorsuOpen", Open,
@@ -115,7 +132,7 @@ M.register_exclusive = function(config)
             table.insert(entries, entry)
         end
 
-        vim.uv.chdir(vim.b.norsu_root .. "/" .. config.entry_dir)
+        vim.uv.chdir(vim.b.norsu.root .. "/" .. config.entry_dir)
         for i = 1, #entries do
             local ok, err_mkdir = vim.uv.fs_mkdir(entries[i], 493)
             if not ok then
@@ -158,7 +175,7 @@ M.register_exclusive = function(config)
 
             local bufpath_new = bufdir .. "/" .. opts.args
             vim.uv.fs_rename(bufpath, bufpath_new)
-            vim.cmd.edit(bufpath_new)
+            vim.cmd.edit(bufpath_new) -- TODO CONSIDER better way
         end
 
         if opts.args == "" then
@@ -192,8 +209,8 @@ M.register_exclusive = function(config)
             return
         end
 
-        local abspath = vim.b.norsu_root .. "/" .. opts.args
-        local relpath = vim.fs.relpath(vim.b.norsu_root, abspath)
+        local abspath = vim.b.norsu.root .. "/" .. opts.args
+        local relpath = vim.fs.relpath(vim.b.norsu.root, abspath)
 
         -- Ensure the destination exists
         local stat = vim.uv.fs_stat(abspath)
@@ -213,11 +230,11 @@ M.register_exclusive = function(config)
         end
 
         local bufpath = vim.api.nvim_buf_get_name(0)
-        local bufrelpath = vim.fs.relpath(vim.b.norsu_root, bufpath)
+        local bufrelpath = vim.fs.relpath(vim.b.norsu.root, bufpath)
         local bufbasename = vim.fs.basename(bufpath)
 
         local bufpath_new = abspath .. "/" .. bufbasename
-        local bufrelpath_new = vim.fs.relpath(vim.b.norsu_root, bufpath_new)
+        local bufrelpath_new = vim.fs.relpath(vim.b.norsu.root, bufpath_new)
 
         if not opts.bang and vim.uv.fs_stat(bufpath_new) then
             vim.notify(
@@ -266,14 +283,14 @@ M.register_exclusive = function(config)
         for i = #paths, 1, -1 do
             local abspath = paths[i] == "%" and
                 vim.api.nvim_buf_get_name(0) or
-                vim.b.norsu_root .. "/" .. paths[i]
+                vim.b.norsu.root .. "/" .. paths[i]
 
             if not vim.uv.fs_stat(abspath) then
                 table.insert(ghosts, table.remove(paths, i))
                 goto continue
             end
 
-            local relpath = vim.fs.relpath(vim.b.norsu_root, abspath)
+            local relpath = vim.fs.relpath(vim.b.norsu.root, abspath)
             if not relpath then
                 table.insert(foreigners, table.remove(paths, i))
                 goto continue
