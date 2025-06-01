@@ -39,7 +39,7 @@ M.register_ubiquitous = function(config)
         local bufdir = bufname == "" and vim.uv.cwd() or vim.fs.dirname(bufname)
 
         vim.b.norsu.root = bufdir -- TODO FINAL CONSIDER
-        vim.notify("New Norsu wiki at " .. bufdir, vim.log.levels.INFO)
+        vim.notify("New Norsu wiki at " .. bufdir)
     end
     vim.api.nvim_buf_create_user_command(0, "NorsuInit", Init, {})
 end
@@ -87,7 +87,7 @@ M.register_exclusive = function(config)
             end
             vim.uv.fs_close(fd)
 
-            vim.notify("Created note " .. relpath, vim.log.levels.INFO)
+            vim.notify("Created note " .. relpath)
             -- TODO add to index
         end
 
@@ -103,12 +103,15 @@ M.register_exclusive = function(config)
         -- util.open()
         -- :NorsuGoBack and :NorsuGoForward
         -- write tree-sitter-norsu
-        local buf = nil
-        table.insert(vim.b.norsu.history, buf)
-        vim.b.norsu.i = vim.b.norsu.i + 1
-        vim.b.norsu.history[vim.b.norsu.i + 1] = nil
-
         vim.cmd.edit(abspath)
+
+        local buf = vim.api.nvim_get_current_buf()
+        if vim.b.norsu.history[vim.b.norsu.i] ~= buf then
+            table.insert(vim.b.norsu.history, buf)
+            vim.b.norsu.i = vim.b.norsu.i + 1
+            vim.b.norsu.history[vim.b.norsu.i] = buf
+            vim.b.norsu.history[vim.b.norsu.i + 1] = nil
+        end
     end
     vim.api.nvim_buf_create_user_command(0, "NorsuOpen", Open,
         { bang = true, nargs = "?" })
@@ -144,7 +147,7 @@ M.register_exclusive = function(config)
         end
 
         vim.uv.chdir(cwd)
-        vim.notify("Made folder " .. opts.args, vim.log.levels.INFO)
+        vim.notify("Made folder " .. opts.args)
         -- TODO add to index if necessary
     end
     vim.api.nvim_buf_create_user_command(0, "NorsuNewFolder", NewFolder, { nargs = "?" })
@@ -183,7 +186,7 @@ M.register_exclusive = function(config)
                 { prompt = "Enter new name: " },
                 function(input)
                     if input == nil then
-                        vim.notify("Rename aborted", vim.log.levels.INFO)
+                        vim.notify "Rename aborted"
                         return
                     end
                     opts.args = input
@@ -251,7 +254,7 @@ M.register_exclusive = function(config)
         end
 
         vim.cmd.edit(bufpath_new) -- TODO READ is there a more elegant solution?
-        vim.notify(bufrelpath .. " -> " .. bufrelpath_new, vim.log.levels.INFO)
+        vim.notify(bufrelpath .. " -> " .. bufrelpath_new)
     end
     vim.api.nvim_buf_create_user_command(0, "NorsuMove", Move,
         { bang = true, nargs = "?" })
@@ -323,10 +326,7 @@ M.register_exclusive = function(config)
             vim.api.nvim_echo({{ errmsg }}, errmsg ~= "", { err = true })
             if #paths > 0 then
                 vim.defer_fn(function()
-                    vim.notify(
-                        "Deleted " .. #paths .. numerus,
-                        vim.log.levels.INFO
-                    )
+                    vim.notify("Deleted " .. #paths .. numerus)
                 end, 0)
             end
         end
@@ -342,7 +342,7 @@ M.register_exclusive = function(config)
                         (input:lower() == "y" or input:lower() == "yes")
                     ) then
                         vim.defer_fn(function()
-                            vim.notify("Deletion aborted", vim.log.levels.INFO)
+                            vim.notify "Deletion aborted"
                         end, 0)
                         return
                     end
@@ -356,6 +356,73 @@ M.register_exclusive = function(config)
     end
     vim.api.nvim_buf_create_user_command(0, "NorsuDelete", Delete,
         { bang = true, nargs = "?" })
+
+    local GoForward -- Necessary for referencing in `GoBack()`
+
+    --- Navigates back in the note history of the current buffer.
+    --- @param opts GoOpts
+    --- @class GoOpts
+    --- @field count number go back multiple notes
+    local function GoBack(opts)
+        opts.count = opts.count or 1
+
+        if opts.count < 0 then
+            opts.count = -opts.count
+            GoForward(opts)
+            return
+        end
+
+        if vim.b.norsu.i == 1 then
+            vim.notify "Already at oldest note"
+            return
+        end
+
+        if opts.count == 0 or opts.count > vim.b.norsu.i - 1 then
+            vim.notify("Invalid argument", vim.log.levels.ERROR)
+            return
+        end
+
+        vim.b.norsu.i = vim.b.norsu.i - opts.count
+        vim.api.nvim_set_current_buf(vim.b.norsu.history[vim.b.norsu.i])
+    end
+    vim.api.nvim_buf_create_user_command(0, "NorsuGoBack", GoBack, { count = 1 })
+
+    --- Navigates forward in the note history of the current buffer.
+    --- @param opts GoOpts
+    --- @class GoOpts
+    GoForward = function(opts)
+        opts.count = opts.count or 1
+
+        if opts.count < 0 then
+            opts.count = -opts.count
+            GoBack(opts)
+            return
+        end
+
+        if vim.b.norsu.history[vim.b.norsu.i + 1] == nil then
+            vim.notify "Already at newest note"
+            return
+        end
+
+        if opts.count == 0 or not vim.b.norsu.history[vim.b.norsu.i + opts.count] then
+            vim.notify("Invalid argument", vim.log.levels.ERROR)
+            return
+        end
+
+        vim.b.norsu.i = vim.b.norsu.i + opts.count
+        vim.api.nvim_set_current_buf(vim.b.norsu.history[vim.b.norsu.i])
+    end
+    vim.api.nvim_buf_create_user_command(0, "NorsuGoForward", GoForward, { count = 1 })
+end
+
+M.unregister_exclusive = function()
+    vim.api.nvim_buf_del_user_command(0, "NorsuOpen")
+    vim.api.nvim_buf_del_user_command(0, "NorsuNewFolder")
+    vim.api.nvim_buf_del_user_command(0, "NorsuRename")
+    vim.api.nvim_buf_del_user_command(0, "NorsuMove")
+    vim.api.nvim_buf_del_user_command(0, "NorsuDelete")
+    vim.api.nvim_buf_del_user_command(0, "NorsuGoBack")
+    vim.api.nvim_buf_del_user_command(0, "NorsuGoForward")
 end
 
 return M
