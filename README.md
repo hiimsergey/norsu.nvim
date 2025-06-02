@@ -41,6 +41,7 @@ _underline_
 =highlight=
 `code`
 $\TeX$
+> quote
 // Inline markers must be directly connected to text. `* bold? *` is invalid.
 
 [[wiki note link]] // ./'wiki note link'.no
@@ -83,6 +84,4 @@ int main(void) {
     return 0;
 }
 \```
-
-> quote
 ```
