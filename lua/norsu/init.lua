@@ -53,7 +53,7 @@ local M = {}
 --- @param opts? Config user's configuration
 --- @see config.lua
 M.setup = function(opts)
-    if vim.b.norsu then
+    if vim.w.norsu then
         vim.notify(
             "norsu.nvim: Someone else already took our namespace! Resigning...",
             vim.log.levels.ERROR
@@ -70,41 +70,39 @@ M.setup = function(opts)
 
     cmd.register_ubiquitous(config)
 
-    vim.api.nvim_create_autocmd({ "BufEnter", "BufWinEnter" }, {
+    -- TODO NOW switch to command-based checking
+    -- note validity is checked in user commands, not autocmds
+    -- use a one-off (self deleting (using groups)) autocmd checking for the wiki in this file,
+    -- all other ones need to be set with :NorsuWiki
+    -- :NorsuWiki prints current wiki
+    -- :NorsuWiki /path/to/wiki checks if it or a superdir is a valid wiki and sets it
+    -- :NorsuWiki % same for this note
+    vim.api.nvim_create_autocmd("BufEnter", {
         group = group,
         callback = function()
-            -- TODO NOW DEBUG why is this a schrödinger statement?
-            -- TODO NOTE truthy clause is always run if cwd is a wiki
-            -- TODO NOTE might it just be the notify statements lying
-            -- use vim.fn.writefile for debugging
-            -- TODO TEST
-            if vim.b.norsu and vim.b.norsu.root then
-                vim.defer_fn(function()
-                    vim.notify("in a wiki")
-                end, 0)
-                return
-            else
-                vim.defer_fn(function()
-                    vim.notify("not in a wiki")
-                end, 0)
-            end
             local bufname = vim.api.nvim_buf_get_name(0)
             local bufdir = bufname == "" and vim.uv.cwd() or vim.fs.dirname(bufname)
 
-            if vim.b.norsu then
+            if vim.w.norsu then
+                if not vim.fs.relpath(config.root, bufdir) then return end
+
                 local new_wiki_path = get_wiki_path(bufdir, config)
                 if not new_wiki_path then
+                    local left_wiki = vim.w.norsu.root
                     vim.defer_fn(function()
-                        vim.notify("Left wiki " .. vim.b.norsu.root)
+                        vim.notify("Left wiki " .. left_wiki)
                     end, 0)
-                    vim.b.norsu = nil
-                    cmd.unregister_exclusive()
+
+                    vim.w.norsu = nil
+                    return
                 end
 
-                vim.b.norsu.root = new_wiki_path
-                vim.defer_fn(function()
-                    vim.notify("TODO DEBUG Entered wiki " .. new_wiki_path)
-                end, 0)
+                if vim.w.norsu.root ~= new_wiki_path then
+                    vim.w.norsu.root = new_wiki_path
+                    vim.defer_fn(function()
+                        vim.notify("Entered wiki " .. new_wiki_path)
+                    end, 0)
+                end
                 return
             end
 
@@ -121,7 +119,7 @@ M.setup = function(opts)
             -- opening with :edit
             -- Where indexing starts
             -- TODO TYPE annotate
-            vim.b.norsu = {
+            vim.w.norsu = {
                 root = wiki_path,
                 history = {},
                 i = 0

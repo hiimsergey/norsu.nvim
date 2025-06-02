@@ -8,7 +8,7 @@ M.register_ubiquitous = function(config)
     --- `.norsu.json`.
     local function Init()
         if vim.uv.fs_stat(".norsu.json") then
-            vim.notify(vim.b.norsu.root .. " is already a wiki")
+            vim.notify(vim.w.norsu.root .. " is already a wiki")
             return
         end
 
@@ -38,10 +38,11 @@ M.register_ubiquitous = function(config)
         local bufname = vim.api.nvim_buf_get_name(0)
         local bufdir = bufname == "" and vim.uv.cwd() or vim.fs.dirname(bufname)
 
-        vim.b.norsu.root = bufdir -- TODO FINAL CONSIDER
+        vim.w.norsu.root = bufdir -- TODO FINAL CONSIDER
         vim.notify("New Norsu wiki at " .. bufdir)
     end
-    vim.api.nvim_buf_create_user_command(0, "NorsuInit", Init, {})
+    vim.api.nvim_buf_create_user_command(0, "NorsuInit", Init,
+        { desc = "Initialize a new Norsu wiki at cwd" })
 end
 
 -- TODO ALL get completions
@@ -62,8 +63,8 @@ M.register_exclusive = function(config)
 
         if opts.args:sub(-3, -1) ~= ".no" then opts.args = opts.args .. ".no" end
 
-        local abspath = vim.b.norsu.root .. "/" .. config.entry_dir .. "/" .. opts.args
-        local relpath = vim.fs.relpath(vim.b.norsu.root, abspath)
+        local abspath = vim.w.norsu.root .. "/" .. config.entry_dir .. "/" .. opts.args
+        local relpath = vim.fs.relpath(vim.w.norsu.root, abspath)
 
         -- Ensure the destination exists
         if not relpath then
@@ -106,15 +107,15 @@ M.register_exclusive = function(config)
         vim.cmd.edit(abspath)
 
         local buf = vim.api.nvim_get_current_buf()
-        if vim.b.norsu.history[vim.b.norsu.i] ~= buf then
-            table.insert(vim.b.norsu.history, buf)
-            vim.b.norsu.i = vim.b.norsu.i + 1
-            vim.b.norsu.history[vim.b.norsu.i] = buf
-            vim.b.norsu.history[vim.b.norsu.i + 1] = nil
+        if vim.w.norsu.history[vim.w.norsu.i] ~= buf then
+            table.insert(vim.w.norsu.history, buf)
+            vim.w.norsu.i = vim.w.norsu.i + 1
+            vim.w.norsu.history[vim.w.norsu.i] = buf
+            vim.w.norsu.history[vim.w.norsu.i + 1] = nil
         end
     end
     vim.api.nvim_buf_create_user_command(0, "NorsuOpen", Open,
-        { bang = true, nargs = "?" })
+        { bang = true, nargs = "?", desc = "Open or create a new Norsu note" })
 
     --- Create a new folder in the wiki with a Telescope picker or an arg.
     --- @param opts NewFolderOpts
@@ -135,7 +136,7 @@ M.register_exclusive = function(config)
             table.insert(entries, entry)
         end
 
-        vim.uv.chdir(vim.b.norsu.root .. "/" .. config.entry_dir)
+        vim.uv.chdir(vim.w.norsu.root .. "/" .. config.entry_dir)
         for i = 1, #entries do
             local ok, err_mkdir = vim.uv.fs_mkdir(entries[i], 493)
             if not ok then
@@ -150,7 +151,8 @@ M.register_exclusive = function(config)
         vim.notify("Made folder " .. opts.args)
         -- TODO add to index if necessary
     end
-    vim.api.nvim_buf_create_user_command(0, "NorsuNewFolder", NewFolder, { nargs = "?" })
+    vim.api.nvim_buf_create_user_command(0, "NorsuNewFolder", NewFolder,
+        { nargs = "?", desc = "Create a folder in a Norsu wiki" })
 
     --- Rename the currently open note with a Telescope picker or an arg.
     --- @param opts RenameOpts
@@ -198,7 +200,8 @@ M.register_exclusive = function(config)
 
         actually_rename()
     end
-    vim.api.nvim_buf_create_user_command(0, "NorsuRename", Rename, { nargs = "?" })
+    vim.api.nvim_buf_create_user_command(0, "NorsuRename", Rename,
+        { nargs = "?", desc = "Rename a Norsu note" })
 
     --- Move the currently open note to another folder with a Telescope picker or an arg.
     --- @param opts MoveOpts
@@ -212,8 +215,8 @@ M.register_exclusive = function(config)
             return
         end
 
-        local abspath = vim.b.norsu.root .. "/" .. opts.args
-        local relpath = vim.fs.relpath(vim.b.norsu.root, abspath)
+        local abspath = vim.w.norsu.root .. "/" .. opts.args
+        local relpath = vim.fs.relpath(vim.w.norsu.root, abspath)
 
         -- Ensure the destination exists
         local stat = vim.uv.fs_stat(abspath)
@@ -233,11 +236,11 @@ M.register_exclusive = function(config)
         end
 
         local bufpath = vim.api.nvim_buf_get_name(0)
-        local bufrelpath = vim.fs.relpath(vim.b.norsu.root, bufpath)
+        local bufrelpath = vim.fs.relpath(vim.w.norsu.root, bufpath)
         local bufbasename = vim.fs.basename(bufpath)
 
         local bufpath_new = abspath .. "/" .. bufbasename
-        local bufrelpath_new = vim.fs.relpath(vim.b.norsu.root, bufpath_new)
+        local bufrelpath_new = vim.fs.relpath(vim.w.norsu.root, bufpath_new)
 
         if not opts.bang and vim.uv.fs_stat(bufpath_new) then
             vim.notify(
@@ -257,7 +260,7 @@ M.register_exclusive = function(config)
         vim.notify(bufrelpath .. " -> " .. bufrelpath_new)
     end
     vim.api.nvim_buf_create_user_command(0, "NorsuMove", Move,
-        { bang = true, nargs = "?" })
+        { bang = true, nargs = "?", desc = "Move a Norsu note to another folder" })
 
     --- Delete notes and folders using a Telescope picker or an arg.
     --- Use `<Tab>` to select items and `<CR>` to submit.
@@ -286,14 +289,14 @@ M.register_exclusive = function(config)
         for i = #paths, 1, -1 do
             local abspath = paths[i] == "%" and
                 vim.api.nvim_buf_get_name(0) or
-                vim.b.norsu.root .. "/" .. paths[i]
+                vim.w.norsu.root .. "/" .. paths[i]
 
             if not vim.uv.fs_stat(abspath) then
                 table.insert(ghosts, table.remove(paths, i))
                 goto continue
             end
 
-            local relpath = vim.fs.relpath(vim.b.norsu.root, abspath)
+            local relpath = vim.fs.relpath(vim.w.norsu.root, abspath)
             if not relpath then
                 table.insert(foreigners, table.remove(paths, i))
                 goto continue
@@ -355,9 +358,7 @@ M.register_exclusive = function(config)
         actually_delete()
     end
     vim.api.nvim_buf_create_user_command(0, "NorsuDelete", Delete,
-        { bang = true, nargs = "?" })
-
-    local GoForward -- Necessary for referencing in `GoBack()`
+        { bang = true, nargs = "?", desc = "Delete the currently open Norsu note" })
 
     --- Navigates back in the note history of the current buffer.
     --- @param opts GoOpts
@@ -366,63 +367,43 @@ M.register_exclusive = function(config)
     local function GoBack(opts)
         opts.count = opts.count or 1
 
-        if opts.count < 0 then
-            opts.count = -opts.count
-            GoForward(opts)
-            return
-        end
-
-        if vim.b.norsu.i == 1 then
+        if vim.w.norsu.i == 1 then
             vim.notify "Already at oldest note"
             return
         end
 
-        if opts.count == 0 or opts.count > vim.b.norsu.i - 1 then
+        if opts.count < 1 or opts.count > vim.w.norsu.i - 1 then
             vim.notify("Invalid argument", vim.log.levels.ERROR)
             return
         end
 
-        vim.b.norsu.i = vim.b.norsu.i - opts.count
-        vim.api.nvim_set_current_buf(vim.b.norsu.history[vim.b.norsu.i])
+        vim.w.norsu.i = vim.w.norsu.i - opts.count
+        vim.api.nvim_set_current_buf(vim.w.norsu.history[vim.w.norsu.i])
     end
-    vim.api.nvim_buf_create_user_command(0, "NorsuGoBack", GoBack, { count = 1 })
+    vim.api.nvim_buf_create_user_command(0, "NorsuGoBack", GoBack,
+        { count = 1, desc = "Navigate back in the Norsu note history" })
 
     --- Navigates forward in the note history of the current buffer.
     --- @param opts GoOpts
     --- @class GoOpts
-    GoForward = function(opts)
+    local function GoForward(opts)
         opts.count = opts.count or 1
 
-        if opts.count < 0 then
-            opts.count = -opts.count
-            GoBack(opts)
-            return
-        end
-
-        if vim.b.norsu.history[vim.b.norsu.i + 1] == nil then
+        if vim.w.norsu.history[vim.w.norsu.i + 1] == nil then
             vim.notify "Already at newest note"
             return
         end
 
-        if opts.count == 0 or not vim.b.norsu.history[vim.b.norsu.i + opts.count] then
+        if opts.count < 1 or not vim.w.norsu.history[vim.w.norsu.i + opts.count] then
             vim.notify("Invalid argument", vim.log.levels.ERROR)
             return
         end
 
-        vim.b.norsu.i = vim.b.norsu.i + opts.count
-        vim.api.nvim_set_current_buf(vim.b.norsu.history[vim.b.norsu.i])
+        vim.w.norsu.i = vim.w.norsu.i + opts.count
+        vim.api.nvim_set_current_buf(vim.w.norsu.history[vim.w.norsu.i])
     end
-    vim.api.nvim_buf_create_user_command(0, "NorsuGoForward", GoForward, { count = 1 })
-end
-
-M.unregister_exclusive = function()
-    vim.api.nvim_buf_del_user_command(0, "NorsuOpen")
-    vim.api.nvim_buf_del_user_command(0, "NorsuNewFolder")
-    vim.api.nvim_buf_del_user_command(0, "NorsuRename")
-    vim.api.nvim_buf_del_user_command(0, "NorsuMove")
-    vim.api.nvim_buf_del_user_command(0, "NorsuDelete")
-    vim.api.nvim_buf_del_user_command(0, "NorsuGoBack")
-    vim.api.nvim_buf_del_user_command(0, "NorsuGoForward")
+    vim.api.nvim_buf_create_user_command(0, "NorsuGoForward", GoForward,
+        { count = 1, desc = "Navigate forward in the Norsu note history" })
 end
 
 return M
