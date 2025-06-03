@@ -20,6 +20,7 @@
 --      maybe targets can be given aliases so you could have multiple html targets
 -- all the other commands
 local vim = vim
+local act = require "norsu.actually"
 local cmd = require "norsu.commands"
 local conf = require "norsu.config"
 
@@ -38,7 +39,7 @@ M.setup = function(opts)
         return
     end
 
-    local config = vim.api.tbl_deep_extend("force", conf, opts or {})
+    local config = vim.tbl_deep_extend("force", conf, opts or {})
     local group = vim.api.nvim_create_augroup("Norsu", { clear = true })
 
     -- TODO NOW
@@ -49,13 +50,19 @@ M.setup = function(opts)
         group = group,
         pattern = "*.no",
 
-        --- Self-destructing autocommand. If the first file you open belongs to
-        --- a Norsu wiki, then it enters automatically.
+        --- Self-destructing autocommand. If the first opened file belongs to
+        --- a Norsu wiki, enter automatically.
         callback = function()
+            local function destroy() vim.api.nvim_del_augroup_by_id(group) end
+
             local bufname = vim.api.nvim_buf_get_name(0)
             local bufdir = bufname == "" and vim.uv.cwd() or vim.fs.dirname(bufname)
 
-            if not vim.fs.relpath(config.root, bufdir) then goto del end
+            if not vim.fs.relpath(config.root, bufdir) then
+                destroy()
+                return
+            end
+
             local norsu_dir = vim.fs.find(".norsu", {
                 path = bufdir,
                 stop = config.root,
@@ -63,33 +70,10 @@ M.setup = function(opts)
                 upward = true
             })
             if next(norsu_dir) then
-                vim.g.norsu = {
-                    wiki = vim.fs.dirname(norsu_dir[1]),
-                    history = {},
-                    i = 0
-                }
-
-                cmd.register_exclusive(config) -- TODO NOW
-
-                -- TODO CONSIDER MOVE autocmds.lua
-                vim.api.nvim_create_autocmd("BufWritePost", {
-                    group = group,
-                    callback = function()
-                        -- TODO PLAN
-                        -- reindex:
-                        -- find new links
-                        -- CONSIDER unregistering exclusive commands on detecting
-                        vim.cmd.quit()
-                    end
-                })
-
-                vim.defer_fn(function()
-                    vim.notify("Entered wiki " .. vim.g.norsu.wiki)
-                end, 0)
+                act.wiki(norsu_dir[1], config)
             end
 
-            ::del::
-            vim.api.nvim_del_augroup_by_id(group)
+            destroy()
         end
     })
 end
