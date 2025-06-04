@@ -1,3 +1,7 @@
+-- TODO NOW
+-- MOVE both command namespaces to norsu.util
+-- FINISH NorsuWiki
+--
 -- TODO PLAN
 -- test if auto-recognition works
 -- :NorsuWiki (sets new wiki or prints cur one)
@@ -20,9 +24,9 @@
 --      maybe targets can be given aliases so you could have multiple html targets
 -- all the other commands
 local vim = vim
-local act = require "norsu.actually"
-local cmd = require "norsu.commands"
+local autocmds = require "norsu.autocmds"
 local conf = require "norsu.config"
+local util = require "norsu.util"
 
 local M = {}
 
@@ -40,42 +44,12 @@ M.setup = function(opts)
     end
 
     local config = vim.tbl_deep_extend("force", conf, opts or {})
-    local group = vim.api.nvim_create_augroup("Norsu", { clear = true })
 
-    -- TODO NOW
-    cmd.register_ubiquitous(config)
+    util.commands.ubiquitous(config)
+    autocmds.auto_enter_wiki(config)
 
-    -- TODO CONSIDER MOVE autocmds.lua
-    vim.api.nvim_create_autocmd("BufEnter", {
-        group = group,
-        pattern = "*.no",
-
-        --- Self-destructing autocommand. If the first opened file belongs to
-        --- a Norsu wiki, enter automatically.
-        callback = function()
-            local function destroy() vim.api.nvim_del_augroup_by_id(group) end
-
-            local bufname = vim.api.nvim_buf_get_name(0)
-            local bufdir = bufname == "" and vim.uv.cwd() or vim.fs.dirname(bufname)
-
-            if not vim.fs.relpath(config.root, bufdir) then
-                destroy()
-                return
-            end
-
-            local norsu_dir = vim.fs.find(".norsu", {
-                path = bufdir,
-                stop = config.root,
-                type = "directory",
-                upward = true
-            })
-            if next(norsu_dir) then
-                act.wiki(norsu_dir[1], config)
-            end
-
-            destroy()
-        end
-    })
+    -- TODO CONSIDER ADD autocmd that tells if a .no file belongs to a wiki but your cwd
+    -- is not set to it. closes on init
 end
 
 return M
