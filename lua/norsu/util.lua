@@ -1,5 +1,4 @@
 local vim = vim
-local autocmds = require "norsu.autocmds"
 
 local M = {}
 
@@ -71,6 +70,12 @@ M.commands = {
                     vim.uv.chdir(entry)
                 end
 
+                local ok, err = vim.uv.fs_mkdir(".norsu", 493)
+                if not ok then
+                    vim.notify(err, vim.log.levels.ERROR)
+                    return
+                end
+
                 wiki_path = opts.args
             end
 
@@ -106,7 +111,7 @@ end
 M.actually = {
     --- Changes into `dir` and prepares Norsu for this wiki.
     wiki = function(dir, config)
-        vim.uv.chdir(dir) -- TODO NOW DEBUG
+        vim.uv.chdir(dir)
 
         if not vim.g.norsu then
             M.commands.exclusive(config)
@@ -118,7 +123,18 @@ M.actually = {
             i = 0
         }
 
-        autocmds.reindex(config)
+        local group = vim.api.nvim_create_augroup("NorsuOnSave", { clear = true })
+        vim.api.nvim_create_autocmd("BufWritePost", {
+            group = group,
+
+            --- Incrementally alter the wiki index after saving.
+            callback = function()
+                -- TODO NOW PLAN
+                -- reindex:
+                -- find new links
+                vim.cmd.quit()
+            end
+        })
 
         vim.defer_fn(function()
             vim.notify("Changed into Norsu wiki at " .. vim.g.norsu.wiki)

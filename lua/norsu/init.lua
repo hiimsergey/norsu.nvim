@@ -24,7 +24,6 @@
 --      maybe targets can be given aliases so you could have multiple html targets
 -- all the other commands
 local vim = vim
-local autocmds = require "norsu.autocmds"
 local conf = require "norsu.config"
 local util = require "norsu.util"
 
@@ -46,10 +45,26 @@ M.setup = function(opts)
     local config = vim.tbl_deep_extend("force", conf, opts or {})
 
     util.commands.ubiquitous(config)
-    autocmds.auto_enter_wiki(config)
 
-    -- TODO CONSIDER ADD autocmd that tells if a .no file belongs to a wiki but your cwd
-    -- is not set to it. closes on init
+    local group = vim.api.nvim_create_augroup("NorsuAutoWiki", { clear = true })
+    vim.api.nvim_create_autocmd("BufEnter", {
+        group = group,
+
+        --- Self-destructing autocommand. If the first opened file belongs to
+        --- a Norsu wiki, enter automatically.
+        callback = function()
+            local function destroy() vim.api.nvim_del_augroup_by_id(group) end
+
+            local wiki_path = util.get_wiki_path(vim.uv.cwd(), config)
+            if not wiki_path then
+                destroy()
+                return
+            end
+
+            util.actually.wiki(wiki_path, config)
+            destroy()
+        end
+    })
 end
 
 return M
