@@ -1,6 +1,7 @@
 local vim = vim
 
 local M = {}
+local group = vim.api.nvim_create_augroup("NorsuOnSave", { clear = true })
 
 --- Register Norsu commands
 M.commands = {
@@ -18,6 +19,7 @@ M.commands = {
 
         vim.api.nvim_create_user_command("NorsuQuit", function()
             vim.g.norsu = nil
+            vim.api.nvim_del_augroup_by_id(group)
             for _, cmd in pairs(vim.api.nvim_get_commands {}) do
                 if cmd.name:sub(1, 5) == "Norsu" and cmd.name ~= "NorsuWiki" then
                     vim.api.nvim_del_user_command(cmd.name)
@@ -123,7 +125,6 @@ M.actually = {
             i = 0
         }
 
-        local group = vim.api.nvim_create_augroup("NorsuOnSave", { clear = true })
         vim.api.nvim_create_autocmd("BufWritePost", {
             group = group,
 

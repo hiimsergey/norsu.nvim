@@ -3,8 +3,8 @@ A personal knowledge management plugin with a tailored markup language.
 
 ## Philosophy
 TODO
-%% modularity, UX, portability (mention exports to md and pdf, among others)
-%% language: simplicity, extensibility, human-readability, neovim first, personal appeal
+<!-- modularity, UX, portability (mention exports to md and pdf, among others)
+language: simplicity, extensibility, human-readability, neovim first, personal appeal -->
 
 ## Language syntax
 <pre>
@@ -82,22 +82,20 @@ int main(void) {
 ```
 </pre>
 
-%% TODO ADD version requirements for dependencies
+<!-- TODO ADD version requirements for dependencies -->
 ## Requirements
 - Neovim **0.11.0** or above
 - Dependency plugins:
-    - [nvim-treesitter](https://github.com/nvim-treesitter/nvim-treesitter)
-    - [telescope.nvim](https://github.com/nvim-telescope/telescope.nvim)
+    - [nvim-treesitter](https://github.com/nvim-treesitter/nvim-treesitter) for syntax-related operations
+    - [telescope.nvim](https://github.com/nvim-telescope/telescope.nvim) for pickers for interaction
 
 ## Installation
-TODO
-%% all the cool pkg managers
+TODO <!-- all the cool pkg managers -->
 
 ## Configuration
-TODO
-%% review config object
+TODO <!-- review config object -->
 
 ## Extensions
-TODO
-%% explain how extending works
-%% name notable extensions: query, export, bookmarks
+TODO <!--
+explain how extending works
+name notable extensions: query, export, bookmarks -->

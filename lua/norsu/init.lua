@@ -1,15 +1,20 @@
 -- TODO NOW
--- MOVE both command namespaces to norsu.util
--- FINISH NorsuWiki
---
--- TODO PLAN
--- test if auto-recognition works
--- :NorsuWiki (sets new wiki or prints cur one)
 -- indexing
+--      after actually.wiki()
+--          decompress the cache
+--          then glob all .no files
+--          compare hashes
+--          update entries if necessary
+--      after saving
+--          compare ts trees
+--          update entry if necessary
+--      before closing nvim
+--          compress index
 -- caching
--- rest: commands
+-- port rest of commands
+--
 -- GoBack, GoForward
--- Search
+-- NorsuSearch?
 -- NorsuTagsShow, NorsuTagsRename
 -- tree-sitter-norsu
 -- NorsuQuery...
