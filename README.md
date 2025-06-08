@@ -1,3 +1,5 @@
+> [!WARN] In development! :pensive:
+ 
 # norsu.nvim
 A personal knowledge management plugin with a tailored markup language.
 
