@@ -1,29 +1,32 @@
-> [!WARN] In development! :pensive:
+> [!WARNING]
+> In development! :pensive:
  
 # norsu.nvim
 A personal knowledge management plugin with a tailored markup language.
 
 ## Philosophy
-TODO
-<!-- modularity, UX, portability (mention exports to md and pdf, among others)
-language: simplicity, extensibility, human-readability, neovim first, personal appeal -->
+- readability
+- Neovim-first apperance and workflow
+- portability <!-- TODO see norsu-export -->
+- Lua-first for interactive parts (frontmatter, lua links, norsu-query)
+- personal appeal to me
 
 ## Language syntax
 <pre>
-/***
+%%%
 date: 2025-04-02
 author: me
 type: frontmatter
-*/
+%%%
 
-// single-line comment
-/*
+% single-line comment
+%%
 multi
 line
 comment
-*/
+%%
 
---- // separator
+--- % separator
 
 # heading 1
 ## heading 2
@@ -40,15 +43,19 @@ _underline_
 `code`
 $\TeX$
 > quote
-// Inline markers must be directly connected to text. `* bold? *` is invalid.
+% Inline markers must be directly connected to text. `* bold? *` is invalid.
 
-[[wiki note link]] // ./'wiki note link'.no
+[[wiki note link]] % ./'wiki note link'.no
 [[wiki note link|]]
 [[https://gnu.org]]
 [[file:///home/user/.gtkrc-2.0]]
-![[note]] // show the contents of ./note.no
-![[image]] // show an image (norsu-sixel)
-[[$echo "Hello World"]] // shell commands (norsu-shell)
+![[note]] % show the contents of ./note.no
+![[image]] % show an image (norsu-sixel)
+$[[vim.print "Hello world" |Lua code]]
+$[[
+vim.print "It even allows multiple-lines"
+vim.cmd.colorscheme "slate"
+|Multi-line lua link]]
 
 - bullet list
 - bullet list
@@ -69,7 +76,7 @@ B. same but in capital
 ...
 AA. same but in capital
 
-#tag // norsu-tags
+#tag % norsu-tags
 #tag/subtag
 
 | table header | table header |
