@@ -12,20 +12,21 @@ Requires Neovim **0.11.0** or above.
 
 ## Language
 ```
-/***
-date: 2025-04-02
-author: me
-type: frontmatter
-*/
+%%%
+index = 5,
+date = { year = 2025, month = 4, day = 2 },
+author = "me",
+frontmatter = true,
+%%%
 
-// single-line comment
-/*
+% single-line comment
+%%
 multi
 line
 comment
-*/
+%%
 
---- // separator
+--- % separator
 
 # heading 1
 ## heading 2
@@ -42,15 +43,15 @@ _underline_
 `code`
 $\TeX$
 > quote
-// Inline markers must be directly connected to text. `* bold? *` is invalid.
+% Inline markers must be directly connected to text. `* bold? *` is invalid.
 
-[[wiki note link]] // ./'wiki note link'.no
+[[wiki note link]] % ./'wiki note link'.no
 [[wiki note link|]]
 [[https://gnu.org]]
 [[file:///home/user/.gtkrc-2.0]]
-![[note]] // show the contents of ./note.no
-![[image]] // show an image (norsu-sixel)
-[[$echo "Hello World"]] // shell commands (norsu-shell)
+![[note]] % show the contents of ./note.no
+![[image]] % show an image (norsu-sixel)
+[[$echo "Hello World"]] % shell commands (norsu-shell)
 
 - bullet list
 - bullet list
@@ -71,7 +72,7 @@ B. same but in capital
 ...
 AA. same but in capital
 
-#tag // norsu-tags
+#tag % norsu-tags
 #tag/subtag
 
 | table header | table header |
