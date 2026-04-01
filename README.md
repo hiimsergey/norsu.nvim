@@ -30,7 +30,7 @@ comment
 
 # heading 1
 ## heading 2
-### hedaing 3
+### heading 3
 #### heading 4
 ##### heading 5
 ###### heading 6
@@ -42,7 +42,6 @@ _underline_
 =highlight=
 `code`
 $\TeX$
-> quote
 % Inline markers must be directly connected to text. `* bold? *` is invalid.
 
 [[wiki note link]] % ./'wiki note link'.no
@@ -52,6 +51,8 @@ $\TeX$
 ![[note]] % show the contents of ./note.no
 ![[image]] % show an image (norsu-sixel)
 [[$echo "Hello World"]] % shell commands (norsu-shell)
+
+> quote block
 
 - bullet list
 - bullet list

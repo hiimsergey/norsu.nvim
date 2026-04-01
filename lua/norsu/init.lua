@@ -54,6 +54,7 @@ local M = {}
 --- @param opts? Config user's configuration
 --- @see config.lua
 M.setup = function(opts)
+	-- TODO TEST
 	if vim.w.norsu then
 		vim.notify(
 			"norsu.nvim: Someone else already took our namespace! Resigning...",
