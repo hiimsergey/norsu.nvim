@@ -7,8 +7,15 @@ Requires Neovim **0.11.0** or above.
 - Simplicity
 - Extensibility
 - Human-readability, even in source mode
-- Neovim first
+- Neovim-first approach
 - appeal to me :)
+
+## Prerequisites
+- [nvim-treesitter](https://github.com/nvim-treesitter/nvim-treesitter)
+- [telescope.nvim](https://github.com/nvim-telescope/telescope.nvim)
+
+## Installation
+TODO
 
 ## Language
 ```
@@ -87,3 +94,8 @@ int main(void) {
 }
 \```
 ```
+
+## Tips & tricks
+
+### Get a wiki selection
+TODO include telescope picker script over arbitrary dirs
