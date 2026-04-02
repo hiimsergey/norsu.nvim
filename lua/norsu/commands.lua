@@ -1,5 +1,6 @@
 local vim = vim
 local uv = vim.uv
+local tst_move = require "nvim-treesitter-textobjects.move"
 local get_wiki_path = require "norsu.get_wiki_path"
 local M = {}
 
@@ -43,8 +44,23 @@ end
 M.register_exclusive = function()
 	if vim.g.norsu then return end
 
-	-- TODO PLAN
-	-- Norsu
+	--- Moves cursor to next link.
+	--- TODO CHECK does it cycle?
+	local function NorsuLinkNext()
+		tst_move.goto_next_start("@link", "textobjects")
+	end
+	vim.api.nvim_create_user_command("NorsuLinkNext", NorsuLinkNext,
+		{ desc = "Move cursor to next link" })
+
+	--- Moves cursor to previous link.
+	--- TODO CHECK does it cycle?
+	local function NorsuLinkPrev()
+		tst_move.goto_previous_start("@link", "textobjects")
+	end
+	vim.api.nvim_create_user_command("NorsuLinkPrev", NorsuLinkPrev,
+		{ desc = "Move cursor to previous link" })
+
+	-- TODO NOW
 end
 
 return M
