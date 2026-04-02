@@ -1,7 +1,7 @@
 local vim = vim
-local cmd = require "norsu.commands"
 local err = require "norsu.err"
 local get_wiki_path = require "norsu.get_wiki_path"
+local cmd = require "norsu.cmd"
 local M = {}
 
 --- Starting point of the plugin.
@@ -17,7 +17,13 @@ M.setup = function(root)
 	end
 
 	root = root or os.getenv "HOME" or os.getenv "HOMEPATH" or "/"
-	cmd.register_ubiquitous(root)
+	vim.g.norsu = { root = root }
+	-- TODO NOW DEBUG
+	-- 1. when launching a norsu file from a hard-coded keybind, initialization
+	--    doesnt trigger at all
+	-- 2. when triggering init but then using hard-coded keybind, exclusive commands
+	--    disappear
+	cmd.register_ubiquitous()
 
 	vim.api.nvim_create_autocmd("BufEnter", {
 		callback = function()
@@ -45,7 +51,10 @@ M.setup = function(root)
 
 			-- only update current norsu wiki if it's a new one
 			if not vim.g.norsu or vim.g.norsu.path ~= wiki_path then
-				vim.g.norsu = { path = wiki_path }
+				local norsu = vim.g.norsu
+				norsu.path = wiki_path
+				vim.g.norsu = norsu
+
 				vim.defer_fn(function()
 					vim.notify("Entered Norsu wiki at " .. wiki_path)
 				end, 0)
