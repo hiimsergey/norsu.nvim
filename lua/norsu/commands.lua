@@ -1,6 +1,7 @@
 local vim = vim
 local uv = vim.uv
 local tst_move = require "nvim-treesitter-textobjects.move"
+local err = require "norsu.err"
 local get_wiki_path = require "norsu.get_wiki_path"
 local M = {}
 
@@ -44,18 +45,69 @@ end
 M.register_exclusive = function()
 	if vim.g.norsu then return end
 
+	--- TODO COMMENT
+	local function NorsuLinkEnter()
+		local bufnr = vim.api.nvim_get_current_buf()
+		local cursor = vim.api.nvim_win_get_cursor(0)
+		-- treesitter is 0-indexed
+		local row, col = cursor[1] - 1, cursor[2]
+
+		local target_node = vim.treesitter.get_node({ bufnr = bufnr, pos = { row, col } })
+		local link_node =
+			target_node:type() == "link" and target_node or target_node:parent()
+		if not link_node or link_node:type() ~= "link" then return end
+		local text_node = link_node:named_child(1) -- second child (i.e. link_text)
+
+		local start_row, start_col, end_row, end_col =
+			vim.treesitter.get_node_range(text_node)
+		local link_text = vim.api.nvim_buf_get_text(bufnr,
+			start_row, start_col, end_row, end_col,
+			{})[1]
+
+		vim.print(link_text)
+	end
+	vim.api.nvim_create_user_command("NorsuLinkEnter", NorsuLinkEnter,
+		{ desc = "Follow link" })
+
 	--- Moves cursor to next link.
-	--- TODO CHECK does it cycle?
 	local function NorsuLinkNext()
-		tst_move.goto_next_start("@link", "textobjects")
+		local function next()
+			if not pcall(tst_move.goto_next_start, "@link", "textobjects") then
+				err "NorsuLinkNext failed! Perhaps you're missing the tree-sitter grammar!"
+			end
+		end
+
+		local before = vim.api.nvim_win_get_cursor(0)
+		next()
+		local after = vim.api.nvim_win_get_cursor(0)
+
+		if before[1] == after[1] and before[2] == after[2] then
+			vim.api.nvim_win_set_cursor(0, { 1, 0 })
+			next()
+		end
 	end
 	vim.api.nvim_create_user_command("NorsuLinkNext", NorsuLinkNext,
 		{ desc = "Move cursor to next link" })
 
 	--- Moves cursor to previous link.
-	--- TODO CHECK does it cycle?
 	local function NorsuLinkPrev()
-		tst_move.goto_previous_start("@link", "textobjects")
+		local function prev()
+			if not pcall(tst_move.goto_previous_start, "@link", "textobjects") then
+				err "NorsuLinkPrev failed! Perhaps you're missing the tree-sitter grammar!"
+			end
+		end
+
+		local before = vim.api.nvim_win_get_cursor(0)
+		prev()
+		local after = vim.api.nvim_win_get_cursor(0)
+
+		if before[1] == after[1] and before[2] == after[2] then
+			local last_line = vim.api.nvim_buf_line_count(0)
+			local last_col =
+				#vim.api.nvim_buf_get_lines(0, last_line - 1, last_line, true)[1]
+			vim.api.nvim_win_set_cursor(0, { last_line, last_col })
+			prev()
+		end
 	end
 	vim.api.nvim_create_user_command("NorsuLinkPrev", NorsuLinkPrev,
 		{ desc = "Move cursor to previous link" })
