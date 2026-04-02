@@ -13,6 +13,7 @@ return function(path, root)
 	if not vim.fs.relpath(root, path) then return end
 	local norsu_json = vim.fs.find(".norsu.json", {
 		upward = true,
+		type = "file",
 		path = path,
 		stop = root
 	})

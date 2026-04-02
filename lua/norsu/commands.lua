@@ -45,7 +45,10 @@ end
 M.register_exclusive = function()
 	if vim.g.norsu then return end
 
-	--- TODO COMMENT
+	--- Opens entry referenced in the link below the cursor.
+	--- If note doesn't exist, opens a new buffer in the wiki root.
+	--- Returns false if there is no link below the cursor, true if the operation
+	--- succeeded.
 	local function NorsuLinkEnter()
 		local bufnr = vim.api.nvim_get_current_buf()
 		local cursor = vim.api.nvim_win_get_cursor(0)
@@ -53,9 +56,8 @@ M.register_exclusive = function()
 		local row, col = cursor[1] - 1, cursor[2]
 
 		local target_node = vim.treesitter.get_node({ bufnr = bufnr, pos = { row, col } })
-		local link_node =
-			target_node:type() == "link" and target_node or target_node:parent()
-		if not link_node or link_node:type() ~= "link" then return end
+		local link_node = target_node:parent()
+		if not link_node or link_node:type() ~= "link" then return false end
 		local text_node = link_node:named_child(1) -- second child (i.e. link_text)
 
 		local start_row, start_col, end_row, end_col =
@@ -63,8 +65,14 @@ M.register_exclusive = function()
 		local link_text = vim.api.nvim_buf_get_text(bufnr,
 			start_row, start_col, end_row, end_col,
 			{})[1]
+		local relpath_wo_ext = vim.fs.find(link_text, {
+			type = "file",
+			path = vim.g.norsu.path
+		})[1] or link_text
 
-		vim.print(link_text)
+		local relpath = relpath_wo_ext .. ".no"
+		vim.cmd.edit(relpath)
+		return true
 	end
 	vim.api.nvim_create_user_command("NorsuLinkEnter", NorsuLinkEnter,
 		{ desc = "Follow link" })

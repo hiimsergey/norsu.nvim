@@ -99,3 +99,6 @@ int main(void) {
 
 ### Get a wiki selection
 TODO include telescope picker script over arbitrary dirs
+
+### Same keybinding for enlinking and following links
+TODO
