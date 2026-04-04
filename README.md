@@ -102,3 +102,6 @@ TODO include telescope picker script over arbitrary dirs
 
 ### Same keybinding for enlinking and following links
 TODO
+
+### Don't bind <Tab> on most terminals
+because it's equivalent to <C-i>
