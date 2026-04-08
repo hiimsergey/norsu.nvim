@@ -104,4 +104,10 @@ TODO include telescope picker script over arbitrary dirs
 TODO
 
 ### Don't bind <Tab> on most terminals
+TODO
 because it's equivalent to <C-i>
+
+### Single command to enter links and cycle checkboxes
+TODO
+
+### Proper file history navigation
