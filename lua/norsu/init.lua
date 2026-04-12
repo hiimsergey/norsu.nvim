@@ -1,7 +1,7 @@
 local vim = vim
 local uv = vim.uv
-local get_wiki_path = require "norsu.get_wiki_path"
 local cmd = require "norsu.cmd"
+local get_wiki_path = require "norsu.get_wiki_path"
 local M = {}
 
 --- Starting point of the plugin.
@@ -15,11 +15,6 @@ M.setup = function(root)
 
 	root = root or uv.os_homedir() or "/"
 	vim.g.norsu = { root = root }
-	-- TODO NOW DEBUG
-	-- 1. when launching a norsu file from a hard-coded keybind, initialization
-	--    doesnt trigger at all
-	-- 2. when triggering init but then using hard-coded keybind, exclusive commands
-	--    disappear
 	cmd.register_ubiquitous()
 
 	vim.api.nvim_create_autocmd("BufEnter", {
@@ -34,7 +29,7 @@ M.setup = function(root)
 			local bufdirpath = bufname == "" and assert(uv.cwd()) or
 				vim.fs.dirname(bufname)
 
-			-- don't proceed if buffer path is outside root or doesn't contain .norsu.json
+			-- Don't proceed if buffer path is outside root or doesn't contain .norsu.json
 			local wiki_path = get_wiki_path(bufdirpath, root)
 			if not wiki_path then return end
 
@@ -50,7 +45,7 @@ M.setup = function(root)
 				end
 			})
 
-			-- only update current norsu wiki if it's a new one
+			-- Only update current norsu wiki if it's a new one
 			if not vim.g.norsu or vim.g.norsu.path ~= wiki_path then
 				local norsu = vim.g.norsu
 				norsu.path = wiki_path
@@ -69,12 +64,6 @@ return M
 
 -- TODO NOTE when leaving wiki for another norsu file, you still can enter links
 -- what to do?
-
--- TODO NOW
--- DEBUG
--- DEBUG NorsuLinkEnter goes to cwd instead of vim.g.norsu.path
--- alias and section links
--- hide punctuation
 
 -- TODO NOTE
 -- consider updating the index locally and only writing it on VimLeave

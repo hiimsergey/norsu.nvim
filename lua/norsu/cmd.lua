@@ -13,8 +13,7 @@ M.register_ubiquitous = function()
 	--- .norsu.json.
 	M.NorsuInit = function()
 		local bufname = vim.api.nvim_buf_get_name(0)
-		local bufdirpath = bufname == "" and assert(uv.cwd()) or
-			vim.fs.dirname(bufname)
+		local bufdirpath = bufname == "" and assert(uv.cwd()) or vim.fs.dirname(bufname)
 		local json_path = bufdirpath .. "/.norsu.json"
 
 		if get_wiki_path(json_path, vim.g.norsu.root) then
@@ -23,11 +22,7 @@ M.register_ubiquitous = function()
 		end
 
 		local fd = assert(uv.fs_open(json_path, "w", 438)) -- 0o666
-		assert(uv.fs_write(
-			fd,
-			[[{ "entry_path": "." }]],
-			-1
-		))
+		assert(uv.fs_write(fd, '{\n\t"entry_path": "."\n}', -1))
 		uv.fs_close(fd)
 
 		M.register_exclusive()
@@ -39,7 +34,7 @@ M.register_ubiquitous = function()
 		vim.notify("New Norsu wiki at " .. bufdirpath)
 	end
 	vim.api.nvim_create_user_command("NorsuInit", M.NorsuInit,
-		{ desc = "Initialize new Norsu wiki at cwd" })
+		{ desc = "Initialize new Norsu wiki at CWD" })
 end
 
 --- Registers Norsu commands only available if we're in a wiki.
@@ -48,7 +43,6 @@ M.register_exclusive = function()
 	-- ^ it used to be vim.g.norsu
 	if vim.g.norsu.path then return end
 
-	-- TODO NOW DEBUG it can jump to ~/foo.no, even if ~ is not a wiki
 	--- Opens entry referenced in the link below the cursor.
 	--- If note doesn't exist, opens a new buffer in the wiki root.
 	--- @return boolean link_below_cursor
@@ -96,8 +90,6 @@ M.register_exclusive = function()
 		end
 
 		local section = link_address:sub(section_separator_index + 1)
-		-- TODO TEST with trailing spaces
-		-- TODO NOW DEBUG trailing spaces should not be part of h_text
 		local query_string = string.format(
 			[[ (
 				((_) (h_text) @text)
