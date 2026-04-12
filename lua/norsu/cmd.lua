@@ -6,6 +6,9 @@ local M = {}
 
 --- Registers NorsuInit, only Norsu command that's always available.
 M.register_ubiquitous = function()
+	-- TODO accept single optional string argument
+	-- ^ i.e. the exact path initialized
+
 	--- Initialize current working directory as new Norsu wiki by creating
 	--- .norsu.json.
 	M.NorsuInit = function()
@@ -45,74 +48,73 @@ M.register_exclusive = function()
 	-- ^ it used to be vim.g.norsu
 	if vim.g.norsu.path then return end
 
+	-- TODO NOW DEBUG it can jump to ~/foo.no, even if ~ is not a wiki
 	--- Opens entry referenced in the link below the cursor.
 	--- If note doesn't exist, opens a new buffer in the wiki root.
-	--- Returns false if there is no link below the cursor, true if the operation
-	--- succeeded.
+	--- @return boolean link_below_cursor
 	M.NorsuLinkEnter = function()
+		--- @param node any
+		--- @return any?
 		local function get_link_address_node(node)
 			if not node then return nil end
-			if node:type() == "link_address" then return node end
-			if node:type() == "link" then
-				-- second child, i.e. link_address
-				return node:named_child(1)
-			end
-			if node:parent():type() ~= "link" then return nil end
-			return node:parent():named_child(1)
+			local parent = node:parent()
+
+			if parent:type() == "link" then return parent:named_child(1) end
+			if node:type() == "link" then return node:named_child(1) end
+			return nil
 		end
 
-		local cursor = vim.api.nvim_win_get_cursor(0)
-		-- treesitter is 0-indexed
-		local row, col = cursor[1] - 1, cursor[2]
-
-		local target_node = vim.treesitter.get_node { bufnr = 0, pos = { row, col } }
-		local addr_node = get_link_address_node(target_node)
-		-- TODO TEST
-		local link_address = vim.treesitter.get_node_text(addr_node, 0)
-
-		local section_separator_index = string.find(link_address, "#", 1, true)
-		if not section_separator_index then
-			print "TODO no hashtag"
-			local note_path = link_address .. ".no"
-
-			local abspath = vim.fs.find(note_path, {
+		--- @param relpath string
+		local function find_and_open(relpath)
+			local abspath = vim.fs.find(relpath, {
 				type = "file",
 				path = vim.g.norsu.path
-			})[1] or note_path
+			})[1] or vim.g.norsu.path .. "/" .. relpath
 
+			-- TODO NOW DEBUG allow opening new buffer, even if changes havent been written
+			-- yet
 			vim.cmd.edit(abspath)
 			return true
 		end
 
-		print "TODO found hashtag"
+		local cursor = vim.api.nvim_win_get_cursor(0)
+		local row, col = cursor[1] - 1, cursor[2]
 
-		local note_path =
-			link_address:sub(1, section_separator_index - 1) .. ".no"
+		local target_node = vim.treesitter.get_node { bufnr = 0, pos = { row, col } }
+		local addr_node = get_link_address_node(target_node)
+		if not addr_node then return false end
 
-		local abspath = vim.fs.find(note_path, {
-			type = "file",
-			path = vim.g.norsu.path
-		})[1] or note_path
+		local link_address = vim.treesitter.get_node_text(addr_node, 0)
+		local section_separator_index = string.find(link_address, "#", 1, true)
 
-		vim.cmd.edit(abspath)
+		if not section_separator_index then
+			find_and_open(link_address .. ".no")
+			return true
+		end
 
-		local lang = "norsu"
+		if section_separator_index > 1 then
+			local note_path = link_address:sub(1, section_separator_index - 1) .. ".no"
+			find_and_open(note_path)
+		end
+
 		local section = link_address:sub(section_separator_index + 1)
 		-- TODO TEST with trailing spaces
+		-- TODO NOW DEBUG trailing spaces should not be part of h_text
 		local query_string = string.format(
 			[[ (
 				((_) (h_text) @text)
-				(#eq? @text %s)
+				(#eq? @text "%s")
 			) ]],
 			section
 		)
-		local query = vim.treesitter.query.parse(lang, query_string)
-		local parser = vim.treesitter.get_parser(0, lang)
-		local root = parser:parse()[1]:root()
+		local query = vim.treesitter.query.parse("norsu", query_string)
+		local root = vim.treesitter.get_parser(0, "norsu"):parse()[1]:root()
 
-		-- TODO NOW
-		-- local _, local section_node = query:iter_captures(root, 0)[1]
-		print(section_node and "found !!!!!!!!!!!!" or "not found :((((((")
+		local section_node = select(2, query:iter_captures(root, 0, 0, -1)())
+		if not section_node then return true end
+
+		row, col = section_node:range()
+		vim.api.nvim_win_set_cursor(0, { row + 1, col })
 
 		return true
 	end

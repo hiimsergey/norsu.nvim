@@ -76,7 +76,7 @@ return M
 -- alias and section links
 -- hide punctuation
 
--- TODO NOW NOTE
+-- TODO NOTE
 -- consider updating the index locally and only writing it on VimLeave
 -- store index wiki.mpack files in stdpath("cache")
 
