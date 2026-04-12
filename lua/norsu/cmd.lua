@@ -71,8 +71,6 @@ M.register_exclusive = function()
 				path = vim.g.norsu.path
 			})[1] or vim.g.norsu.path .. "/" .. relpath
 
-			-- TODO NOW DEBUG allow opening new buffer, even if changes havent been written
-			-- yet
 			vim.cmd.edit(abspath)
 			return true
 		end
