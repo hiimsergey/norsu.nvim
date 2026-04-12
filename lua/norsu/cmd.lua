@@ -1,6 +1,7 @@
 local vim = vim
 local uv = vim.uv
 local tst_move = require "nvim-treesitter-textobjects.move"
+local data = require "norsu.data"
 local get_wiki_path = require "norsu.get_wiki_path"
 local M = {}
 
@@ -16,7 +17,7 @@ M.register_ubiquitous = function()
 		local bufdirpath = bufname == "" and assert(uv.cwd()) or vim.fs.dirname(bufname)
 		local json_path = bufdirpath .. "/.norsu.json"
 
-		if get_wiki_path(json_path, vim.g.norsu.root) then
+		if get_wiki_path(json_path, data.root) then
 			vim.notify "This is already a wiki"
 			return
 		end
@@ -27,10 +28,7 @@ M.register_ubiquitous = function()
 
 		M.register_exclusive()
 
-		local norsu = vim.g.norsu
-		norsu.path = bufdirpath
-		vim.g.norsu = norsu
-
+		data.path = bufdirpath
 		vim.notify("New Norsu wiki at " .. bufdirpath)
 	end
 	vim.api.nvim_create_user_command("NorsuInit", M.NorsuInit,
@@ -39,31 +37,18 @@ end
 
 --- Registers Norsu commands only available if we're in a wiki.
 M.register_exclusive = function()
-	-- TODO CONSIDER vim.g.norsu.path
-	-- ^ it used to be vim.g.norsu
-	if vim.g.norsu.path then return end
+	if data.path then return end
 
 	--- Opens entry referenced in the link below the cursor.
 	--- If note doesn't exist, opens a new buffer in the wiki root.
 	--- @return boolean link_below_cursor
 	M.NorsuLinkEnter = function()
-		--- @param node any
-		--- @return any?
-		local function get_link_address_node(node)
-			if not node then return nil end
-			local parent = node:parent()
-
-			if parent:type() == "link" then return parent:named_child(1) end
-			if node:type() == "link" then return node:named_child(1) end
-			return nil
-		end
-
 		--- @param relpath string
 		local function find_and_open(relpath)
 			local abspath = vim.fs.find(relpath, {
 				type = "file",
-				path = vim.g.norsu.path
-			})[1] or vim.g.norsu.path .. "/" .. relpath
+				path = data.path
+			})[1] or data.path .. "/" .. relpath
 
 			vim.cmd.edit(abspath)
 			return true
@@ -72,8 +57,15 @@ M.register_exclusive = function()
 		local cursor = vim.api.nvim_win_get_cursor(0)
 		local row, col = cursor[1] - 1, cursor[2]
 
-		local target_node = vim.treesitter.get_node { bufnr = 0, pos = { row, col } }
-		local addr_node = get_link_address_node(target_node)
+		local target_node = vim.treesitter.get_node()
+		local addr_node = (function()
+			if not target_node then return nil end
+			local parent = target_node:parent()
+
+			if parent:type() == "link" then return parent:named_child(1) end
+			if target_node:type() == "link" then return target_node:named_child(1) end
+			return nil
+		end)()
 		if not addr_node then return false end
 
 		local link_address = vim.treesitter.get_node_text(addr_node, 0)
@@ -111,23 +103,49 @@ M.register_exclusive = function()
 	vim.api.nvim_create_user_command("NorsuLinkEnter", M.NorsuLinkEnter,
 		{ desc = "Follow link" })
 
+	-- TODO TEST 256+ links in a file
 	-- TODO use the native querying instead and get rid of the dependency
 	--- Moves cursor to next link.
 	M.NorsuLinkNext = function()
-		local function next()
-			local ok = pcall(tst_move.goto_next_start, "@link", "textobjects")
-			assert(ok,
-				"NorsuLinkNext failed! Perhaps you're missing the tree-sitter grammar!")
+		local query = vim.treesitter.query.parse("norsu", "(link) @link")
+		local root = vim.treesitter.get_parser(0, "norsu"):parse()[1]:root()
+
+		local cur_node = vim.treesitter.get_node()
+		local cursor = vim.api.nvim_win_get_cursor(0)
+		local row = cursor[1] - 1
+		local col = cursor[2]
+
+		local cur_link_node = (function()
+			if cur_node:type():sub(1, 4) ~= "link" then return nil end
+			while cur_node:type() ~= "link" do cur_node = cur_node:parent() end
+			return cur_node
+		end)()
+		if cur_link_node then
+			col = col + cur_link_node:byte_length()
 		end
 
-		local before = vim.api.nvim_win_get_cursor(0)
-		next()
-		local after = vim.api.nvim_win_get_cursor(0)
+		local next_link_node =
+			select(2, query:iter_captures(root, 0, row, -1, { start_col = col })()) or
+			select(2, query:iter_captures(root, 0, 0, -1)())
 
-		if before[1] == after[1] and before[2] == after[2] then
-			vim.api.nvim_win_set_cursor(0, { 1, 0 })
-			next()
-		end
+		row, col = next_link_node:range()
+		vim.api.nvim_win_set_cursor(0, { row + 1, col })
+
+		-- TODO REMOVE
+		-- local function next()
+		-- 	local ok = pcall(tst_move.goto_next_start, "@link", "textobjects")
+		-- 	assert(ok,
+		-- 		"NorsuLinkNext failed! Perhaps you're missing the tree-sitter grammar!")
+		-- end
+
+		-- local before = vim.api.nvim_win_get_cursor(0)
+		-- next()
+		-- local after = vim.api.nvim_win_get_cursor(0)
+
+		-- if before[1] == after[1] and before[2] == after[2] then
+		-- 	vim.api.nvim_win_set_cursor(0, { 1, 0 })
+		-- 	next()
+		-- end
 	end
 	vim.api.nvim_create_user_command("NorsuLinkNext", M.NorsuLinkNext,
 		{ desc = "Move cursor to next link" })

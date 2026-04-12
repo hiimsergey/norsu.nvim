@@ -1,6 +1,7 @@
 local vim = vim
 local uv = vim.uv
 local cmd = require "norsu.cmd"
+local data = require "norsu.data"
 local get_wiki_path = require "norsu.get_wiki_path"
 local M = {}
 
@@ -10,11 +11,8 @@ local M = {}
 ---     The wiki indexing algorithm stops crawling here.
 ---     All wikis outside the root will not be indexed.
 M.setup = function(root)
-	-- TODO TEST
-	assert(not vim.g.norsu, "Someone else already took our namespace! Resigning...")
-
 	root = root or uv.os_homedir() or "/"
-	vim.g.norsu = { root = root }
+	data = { root = root }
 	cmd.register_ubiquitous()
 
 	vim.api.nvim_create_autocmd("BufEnter", {
@@ -25,7 +23,7 @@ M.setup = function(root)
 
 			local bufname = vim.api.nvim_buf_get_name(0)
 			-- TODO FINAL CONSIDER a prettier form
-			-- ^v (this is supposed to rseult in an absolute path)
+			-- ^v (this is supposed to result in an absolute path)
 			local bufdirpath = bufname == "" and assert(uv.cwd()) or
 				vim.fs.dirname(bufname)
 
@@ -46,10 +44,8 @@ M.setup = function(root)
 			})
 
 			-- Only update current norsu wiki if it's a new one
-			if not vim.g.norsu or vim.g.norsu.path ~= wiki_path then
-				local norsu = vim.g.norsu
-				norsu.path = wiki_path
-				vim.g.norsu = norsu
+			if not data or data.path ~= wiki_path then
+				data.path = wiki_path
 
 				-- TODO CONSIDER defer_fn
 				vim.defer_fn(function()
