@@ -43,12 +43,20 @@ M.register_exclusive = function()
 	--- If note doesn't exist, opens a new buffer in the wiki root.
 	--- @return boolean link_below_cursor
 	M.NorsuLinkEnter = function()
+		-- TODO NOW
+		vim.print("TODO is " .. data.path)
+		if true then return true end
+
 		--- @param relpath string
 		local function find_and_open(relpath)
+			vim.print(string.format("dealing with %s and %s", relpath, data.path))
+			if true then return true end
 			local abspath = vim.fs.find(relpath, {
 				type = "file",
 				path = data.path
 			})[1] or data.path .. "/" .. relpath
+			vim.print("TODO opening " .. abspath)
+			if true then return true end
 
 			vim.cmd.edit(abspath)
 			return true
@@ -127,6 +135,7 @@ M.register_exclusive = function()
 		local next_link_node =
 			select(2, query:iter_captures(root, 0, row, -1, { start_col = col })()) or
 			select(2, query:iter_captures(root, 0, 0, -1)())
+		if not next_link_node then return end
 
 		row, col = next_link_node:range()
 		vim.api.nvim_win_set_cursor(0, { row + 1, col })

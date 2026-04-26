@@ -15,45 +15,45 @@ M.setup = function(root)
 	data = { root = root }
 	cmd.register_ubiquitous()
 
-	vim.api.nvim_create_autocmd("BufEnter", {
-		callback = function()
-			-- TODO PLAN
-			-- check if note path is in a wiki
-			-- if yes, update vim.g.norsu and register exclusive (if not registered)
+	vim.api.nvim_create_autocmd("BufEnter", { callback = function()
+		-- TODO PLAN
+		-- check if note path is in a wiki
+		-- if yes, update vim.g.norsu and register exclusive (if not registered)
 
-			local bufname = vim.api.nvim_buf_get_name(0)
-			-- TODO FINAL CONSIDER a prettier form
-			-- ^v (this is supposed to result in an absolute path)
-			local bufdirpath = bufname == "" and assert(uv.cwd()) or
-				vim.fs.dirname(bufname)
+		local bufname = vim.api.nvim_buf_get_name(0)
+		-- TODO FINAL CONSIDER a prettier form
+		-- ^v (this is supposed to result in an absolute path)
+		local bufdirpath = bufname == "" and assert(uv.cwd()) or
+			vim.fs.dirname(bufname)
 
-			-- Don't proceed if buffer path is outside root or doesn't contain .norsu.json
-			local wiki_path = get_wiki_path(bufdirpath, root)
-			if not wiki_path then return end
+		-- Don't proceed if buffer path is outside root or doesn't contain .norsu.json
+		local wiki_path = get_wiki_path(bufdirpath, root)
+		if not wiki_path then return end
 
-			-- At that point, the just opened file is part of a wiki.
+		-- At that point, the just opened file is part of a wiki.
 
-			cmd.register_exclusive()
+		cmd.register_exclusive()
 
-			vim.api.nvim_create_autocmd("BufWritePost", {
-				buffer = 0,
-				callback = function()
-					-- TODO PLAN
-					-- reindex: update outlinks and backlinks
-				end
-			})
-
-			-- Only update current norsu wiki if it's a new one
-			if not data or data.path ~= wiki_path then
-				data.path = wiki_path
-
-				-- TODO CONSIDER defer_fn
-				vim.defer_fn(function()
-					vim.notify("Entered Norsu wiki at " .. wiki_path)
-				end, 0)
+		vim.api.nvim_create_autocmd("BufWritePost", {
+			buffer = 0,
+			callback = function()
+				-- TODO PLAN
+				-- reindex: update outlinks and backlinks
 			end
+		})
+
+		-- Only update current norsu wiki if it's a new one
+		if not data or data.path ~= wiki_path then
+			-- TODO NOW DEBUG this doesnt persist
+			--data.path = wiki_path
+			data = { path = wiki_path }
+
+			-- TODO CONSIDER defer_fn
+			vim.defer_fn(function()
+				vim.notify("Entered Norsu wiki at " .. wiki_path)
+			end, 0)
 		end
-	})
+	end })
 end
 
 return M
@@ -100,3 +100,7 @@ return M
 -- option conceal
 -- option also conceal URLs: https://github.com/hiimsergey/tree-sitter-norsu
 -- ^-> github.com/~/tree-sitter-norsu
+
+-- TODO FINAL color ghost links differently
+
+-- TODO if possible, have multiline bullets be indented the same way
