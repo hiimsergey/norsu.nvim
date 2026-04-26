@@ -102,10 +102,10 @@ M.register_exclusive = function()
 	-- TODO use the native querying instead and get rid of the dependency
 	--- Moves cursor to next link.
 	M.NorsuLinkNext = function()
-		-- TODO NOW TEST
 		if vim.w.norsu_links then
-			vim.w.norsu_links_i = (vim.w.norsu_links_i + 1) % #vim.w.norsu_links
+			vim.w.norsu_links_i = (vim.w.norsu_links_i % #vim.w.norsu_links) + 1
 			local range = vim.w.norsu_links[vim.w.norsu_links_i]
+			vim.print(vim.w.norsu_links_i) -- TODO
 			vim.api.nvim_win_set_cursor(0, range)
 			return
 		end
