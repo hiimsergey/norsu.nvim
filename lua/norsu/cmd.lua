@@ -124,8 +124,8 @@ M.register_exclusive = function()
 			select(2, query:iter_captures(root, 0, 0, -1)())
 		if not next_link_node then return end
 
-		local range = next_link_node:range()
-		vim.api.nvim_win_set_cursor(0, { range[1] + 1, range[2] })
+		local srow, scol = next_link_node:range()
+		vim.api.nvim_win_set_cursor(0, { srow + 1, scol })
 
 		-- TODO REMOVE
 		-- local function next()
