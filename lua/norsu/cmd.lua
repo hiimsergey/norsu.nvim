@@ -65,10 +65,10 @@ M.register_exclusive = function()
 		local target_node = vim.treesitter.get_node()
 		local addr_node = (function()
 			if not target_node then return nil end
-			local parent = target_node:parent()
-
-			if parent:type() == "link" then return parent:named_child(1) end
 			if target_node:type() == "link" then return target_node:named_child(1) end
+
+			local parent = target_node:parent()
+			if parent:type() == "link" then return parent:named_child(1) end
 			return nil
 		end)()
 		if not addr_node then return false end
@@ -86,13 +86,13 @@ M.register_exclusive = function()
 			find_and_open(note_path)
 		end
 
-		local section = link_address:sub(section_separator_index + 1)
+		local h_text = link_address:sub(section_separator_index + 1)
 		local query_string = string.format(
 			[[ (
 				((_) (h_text) @text)
 				(#eq? @text "%s")
 			) ]],
-			section
+			h_text
 		)
 		local query = vim.treesitter.query.parse("norsu", query_string)
 		local root = vim.treesitter.get_parser(0, "norsu"):parse()[1]:root()
@@ -116,9 +116,7 @@ M.register_exclusive = function()
 		local root = vim.treesitter.get_parser(0, "norsu"):parse()[1]:root()
 
 		local cur_node = vim.treesitter.get_node()
-		local cursor = vim.api.nvim_win_get_cursor(0)
-		local row = cursor[1] - 1
-		local col = cursor[2]
+		local col = vim.api.nvim_win_get_cursor(0)[2]
 
 		local cur_link_node = (function()
 			if cur_node:type():sub(1, 4) ~= "link" then return nil end
@@ -134,8 +132,8 @@ M.register_exclusive = function()
 			select(2, query:iter_captures(root, 0, 0, -1)())
 		if not next_link_node then return end
 
-		row, col = next_link_node:range()
-		vim.api.nvim_win_set_cursor(0, { row + 1, col })
+		local range = next_link_node:range()
+		vim.api.nvim_win_set_cursor(0, { range[1] + 1, range[2] })
 
 		-- TODO REMOVE
 		-- local function next()
