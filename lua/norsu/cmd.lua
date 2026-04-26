@@ -62,9 +62,6 @@ M.register_exclusive = function()
 			return true
 		end
 
-		local cursor = vim.api.nvim_win_get_cursor(0)
-		local row, col = cursor[1] - 1, cursor[2]
-
 		local target_node = vim.treesitter.get_node()
 		local addr_node = (function()
 			if not target_node then return nil end
@@ -103,7 +100,7 @@ M.register_exclusive = function()
 		local section_node = select(2, query:iter_captures(root, 0, 0, -1)())
 		if not section_node then return true end
 
-		row, col = section_node:range()
+		local row, col = section_node:range()
 		vim.api.nvim_win_set_cursor(0, { row + 1, col })
 
 		return true
