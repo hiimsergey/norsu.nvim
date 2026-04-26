@@ -12,6 +12,7 @@ M.register_ubiquitous = function()
 
 	--- Initialize current working directory as new Norsu wiki by creating
 	--- .norsu.json.
+	--- @return nil
 	M.NorsuInit = function()
 		local bufname = vim.api.nvim_buf_get_name(0)
 		local bufdirpath = bufname == "" and assert(uv.cwd()) or vim.fs.dirname(bufname)
@@ -37,26 +38,16 @@ end
 
 --- Registers Norsu commands only available if we're in a wiki.
 M.register_exclusive = function()
-	if data.path then return end
-
 	--- Opens entry referenced in the link below the cursor.
 	--- If note doesn't exist, opens a new buffer in the wiki root.
 	--- @return boolean link_below_cursor
 	M.NorsuLinkEnter = function()
-		-- TODO NOW
-		vim.print("TODO is " .. data.path)
-		if true then return true end
-
 		--- @param relpath string
 		local function find_and_open(relpath)
-			vim.print(string.format("dealing with %s and %s", relpath, data.path))
-			if true then return true end
 			local abspath = vim.fs.find(relpath, {
 				type = "file",
 				path = data.path
 			})[1] or data.path .. "/" .. relpath
-			vim.print("TODO opening " .. abspath)
-			if true then return true end
 
 			vim.cmd.edit(abspath)
 			return true
@@ -116,7 +107,8 @@ M.register_exclusive = function()
 		local root = vim.treesitter.get_parser(0, "norsu"):parse()[1]:root()
 
 		local cur_node = vim.treesitter.get_node()
-		local col = vim.api.nvim_win_get_cursor(0)[2]
+		local cursor = vim.api.nvim_win_get_cursor(0)
+		local row, col = cursor[1] - 1, cursor[2]
 
 		local cur_link_node = (function()
 			if cur_node:type():sub(1, 4) ~= "link" then return nil end

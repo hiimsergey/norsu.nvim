@@ -11,8 +11,7 @@ local M = {}
 ---     The wiki indexing algorithm stops crawling here.
 ---     All wikis outside the root will not be indexed.
 M.setup = function(root)
-	root = root or uv.os_homedir() or "/"
-	data = { root = root }
+	data.root = root or uv.os_homedir() or "/"
 	cmd.register_ubiquitous()
 
 	vim.api.nvim_create_autocmd("BufEnter", { callback = function()
@@ -27,32 +26,28 @@ M.setup = function(root)
 			vim.fs.dirname(bufname)
 
 		-- Don't proceed if buffer path is outside root or doesn't contain .norsu.json
-		local wiki_path = get_wiki_path(bufdirpath, root)
-		if not wiki_path then return end
+		local wiki_path = get_wiki_path(bufdirpath, data.root)
+		if not wiki_path or wiki_path == data.path then return end
 
 		-- At that point, the just opened file is part of a wiki.
 
-		cmd.register_exclusive()
+		if not data.path then
+			cmd.register_exclusive()
 
-		vim.api.nvim_create_autocmd("BufWritePost", {
-			buffer = 0,
-			callback = function()
-				-- TODO PLAN
-				-- reindex: update outlinks and backlinks
-			end
-		})
-
-		-- Only update current norsu wiki if it's a new one
-		if not data or data.path ~= wiki_path then
-			-- TODO NOW DEBUG this doesnt persist
-			--data.path = wiki_path
-			data = { path = wiki_path }
-
-			-- TODO CONSIDER defer_fn
-			vim.defer_fn(function()
-				vim.notify("Entered Norsu wiki at " .. wiki_path)
-			end, 0)
+			vim.api.nvim_create_autocmd("BufWritePost", {
+				buffer = 0,
+				callback = function()
+					-- TODO PLAN
+					-- reindex: update outlinks and backlinks
+				end
+			})
 		end
+		data.path = wiki_path
+
+		-- TODO CONSIDER defer_fn
+		vim.defer_fn(function()
+			vim.notify("Entered Norsu wiki at " .. wiki_path)
+		end, 0)
 	end })
 end
 
