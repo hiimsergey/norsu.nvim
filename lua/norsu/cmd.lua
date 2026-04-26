@@ -105,7 +105,6 @@ M.register_exclusive = function()
 		if vim.w.norsu_links then
 			vim.w.norsu_links_i = (vim.w.norsu_links_i % #vim.w.norsu_links) + 1
 			local range = vim.w.norsu_links[vim.w.norsu_links_i]
-			vim.print(vim.w.norsu_links_i) -- TODO
 			vim.api.nvim_win_set_cursor(0, range)
 			return
 		end
@@ -141,43 +140,38 @@ M.register_exclusive = function()
 	--- Moves cursor to previous link.
 	-- TODO NOW TEST
 	M.NorsuLinkPrev = function()
-		if vim.w.norsu_links then
-			local n = #vim.w.norsu_links
-			vim.w.norsu_links_i = (vim.w.norsu_links_i + n - 2) % n + 1
-			local range = vim.w.norsu_links[vim.w.norsu_links_i]
-			vim.api.nvim_win_set_cursor(0, range)
-			return
-		end
+		if not vim.w.norsu_links then
+			-- v TODO move this awesome logic into indexing
+			-- NorsuLinkNext/NorsuLinkPrev should not be responsible for finding
+			-- links. instead, the should see the index mpack file
+			local query = vim.treesitter.query.parse("norsu", "(link) @link")
+			local root = vim.treesitter.get_parser(0, "norsu"):parse()[1]:root()
+			local cursor = vim.api.nvim_win_get_cursor(0)
+			local row, col = cursor[1] - 1, cursor[2]
 
-		-- At that point, we just cache every link range in the document
-		-- TODO NOW invalidate cache somewhere
+			local contd_row, contd_col
+			local norsu_links = {}
+			for _, node in query:iter_captures(root, 0, 0, -1) do
+				local srow, scol, _, endcol = node:range()
+				table.insert(norsu_links, { srow + 1, scol })
 
-		local query = vim.treesitter.query.parse("norsu", "(link) @link")
-		local root = vim.treesitter.get_parser(0, "norsu"):parse()[1]:root()
-		local cursor = vim.api.nvim_win_get_cursor(0)
-		local row, col = cursor[1] - 1, cursor[2]
-
-		local contd_row, contd_col
-		local norsu_links = {}
-		for _, node in query:iter_captures(root, 0, 0, -1) do
-			local srow, scol, _, endcol = node:range()
-			table.insert(norsu_links, { srow + 1, scol })
-
-			if srow > row or (srow == row and endcol >= col) then
-				contd_row, contd_col = srow, endcol + 1
-				vim.w.norsu_links_i = #norsu_links -- TODO
-				break
+				if srow > row or (srow == row and endcol >= col) then
+					contd_row, contd_col = srow, endcol + 1
+					vim.w.norsu_links_i = #norsu_links -- TODO
+					break
+				end
 			end
-		end
-		for _, node in query:iter_captures(root, 0,
-			contd_row, -1, { start_col = contd_col })
-		do
-			local srow, scol = node:range()
-			table.insert(norsu_links, { srow + 1, scol })
+			for _, node in query:iter_captures(root, 0,
+				contd_row, -1, { start_col = contd_col })
+			do
+				local srow, scol = node:range()
+				table.insert(norsu_links, { srow + 1, scol })
+			end
+
+			vim.w.norsu_links = norsu_links
 		end
 
-		local n = #norsu_links
-		vim.w.norsu_links = norsu_links
+		local n = #vim.w.norsu_links
 		vim.w.norsu_links_i = (vim.w.norsu_links_i + n - 2) % n + 1
 
 		local range = vim.w.norsu_links[vim.w.norsu_links_i]

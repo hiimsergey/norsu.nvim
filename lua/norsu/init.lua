@@ -41,6 +41,15 @@ M.setup = function(root)
 					-- reindex: update outlinks and backlinks
 				end
 			})
+
+			-- TODO
+			-- local parser = vim.treesitter.get_parser()
+			-- parser:register_cbs { on_changedtree = function()
+			-- 	vim.print [[ TODO PLAN
+			-- 		build outlink list
+			-- 		build backlink list
+			-- 	]]
+			-- end }
 		end
 		data.path = wiki_path
 
